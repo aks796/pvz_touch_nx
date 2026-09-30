@@ -591,6 +591,57 @@ static uint64_t find_nro(char *path, size_t cap) {
   return best;
 }
 
+/* The English files the launcher NRO carries (romfs:/english.apk, the English
+ * APK cut down to what pvz_english.c reads: tools/make_english_pack.py),
+ * copied into the game folder as "PvZ Touch English.apk" -- as if the user
+ * had put an English APK there; from then on it is one. main.c asks for it
+ * when [game] language is english and the folder has no English APK. 1:
+ * copied; 0: the NRO carries none; -1: the copy failed. */
+int dcr_setup_english_from_nro(void) {
+  char nro[320], dst[320], tmp[340];
+  if (!find_nro(nro, sizeof nro)) {
+    debugPrintf("[setup] the English files: no launcher NRO in the game folder to take them from\n");
+    return 0;
+  }
+  FILE *f = fopen(nro, "rb");
+  long off = 0;
+  size_t size = 0;
+  if (!f || nro_romfs_file(f, PVZ_NRO_ENGLISH_ROMFS, &off, &size) != 0 || fseek(f, off, SEEK_SET) != 0) {
+    if (f)
+      fclose(f);
+    debugPrintf("[setup] the English files: %s carries none (built without them)\n", nro);
+    return 0;
+  }
+  root_path(dst, sizeof dst, PVZ_NRO_ENGLISH_NAME);
+  snprintf(tmp, sizeof tmp, "%s.part", dst);
+  FILE *o = fopen(tmp, "wb");
+  const size_t chunk = 1u << 20;
+  uint8_t *buf = malloc(chunk);
+  int ok = o && buf;
+  for (size_t done = 0; ok && done < size;) {
+    const size_t n = size - done < chunk ? size - done : chunk;
+    ok = fread(buf, 1, n, f) == n && fwrite(buf, 1, n, o) == n;
+    done += n;
+    setup_progress("Unpacking the English files", (int)(done * 150 / size));
+  }
+  free(buf);
+  fclose(f);
+  if (o && fclose(o) != 0)
+    ok = 0;
+  if (ok) {
+    unlink(dst);
+    ok = rename(tmp, dst) == 0;
+  }
+  if (!ok) {
+    unlink(tmp);
+    debugPrintf("[setup] the English files: could not write %s\n", dst);
+    return -1;
+  }
+  debugPrintf("[setup] the English files: copied out of %s as %s (%lu KB)\n", strrchr(nro, '/') + 1,
+              PVZ_NRO_ENGLISH_NAME, (unsigned long)(size >> 10));
+  return 1;
+}
+
 static uint8_t *read_whole(const char *path, size_t *len) {
   FILE *f = fopen(path, "rb");
   if (!f)

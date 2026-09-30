@@ -19,3 +19,5 @@
 *.log
 .DS_Store
 __pycache__/
+# game files: never in the repository
+*.apk

@@ -192,6 +192,7 @@ enum { APK_OTHER, APK_GAME, APK_ENGLISH, APK_UNREADABLE };
 static const char *const k_role[] = {"not the game", "the game", "the English source", "not a readable zip"};
 
 static char g_game[512], g_english[512], g_summary[400];
+static int g_have_english;
 
 static int classify(const char *path) {
   mz_zip_archive zip;
@@ -248,6 +249,7 @@ int pvz_apks_find(const char *theRoot) {
     }
   }
   closedir(d);
+  g_have_english = have_english;
   if (have_game)
     debugPrintf("[apk] the game: %s\n", strrchr(g_game, '/') + 1);
   if (have_english)
@@ -267,4 +269,5 @@ const char *pvz_english_apk(void) {
     snprintf(g_english, sizeof g_english, "%s/%s", dcr_game_root(), PVZ_ENGLISH_APK);
   return g_english;
 }
+int pvz_apks_have_english(void) { return g_have_english; }
 const char *pvz_apks_summary(void) { return g_summary[0] ? g_summary : "no APK at all"; }

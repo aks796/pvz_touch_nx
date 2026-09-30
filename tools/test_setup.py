@@ -8,8 +8,8 @@ they replace on the console:
      tools/make_exefs_override.py's exefs.nsp for the same title id;
   2. dex_names() over the APK's classes*.dex gives exactly the class names
      tools/stage_sd.py writes to classes.txt;
-  3. nro_romfs_file() finds the launcher NRO's pvz_nx.nsp / pvz_nx.build and
-     they are the files it was built from.
+  3. nro_romfs_file() finds the launcher NRO's pvz_nx.nsp / pvz_nx.build (and
+     english.apk, when built with it) and they are the files it was built from.
 
     python3 tools/test_setup.py <game.apk> [launcher/pvz_touch_nx.nro]
 """
@@ -100,6 +100,18 @@ def main():
                 assert open(p, 'rb').read() == open(ref, 'rb').read(), name + ' in the NRO differs'
             assert b == open(os.path.join(TOP, 'pvz_nx.build')).read().strip(), 'build number'
             print('OK: %s carries pvz_nx.nsp and build %s' % (os.path.basename(nro), b))
+            # the English files, when it was built with them (dcr_setup_english_from_nro)
+            ref = os.path.join(TOP, 'launcher', 'romfs', 'english.apk')
+            p = os.path.join(t, 'english.apk')
+            if os.path.exists(ref):
+                subprocess.check_output([exe, 'nro', nro, 'english.apk', p])
+                assert open(p, 'rb').read() == open(ref, 'rb').read(), 'english.apk in the NRO differs'
+                with zipfile.ZipFile(p) as z:
+                    assert 'assets/paks/2.ChangeGameChina.zip' in z.namelist(), 'the English pack has no pak'
+                print('OK: %s carries the English files (%d KB), read back exactly' % (os.path.basename(nro),
+                                                                                     os.path.getsize(p) >> 10))
+            else:
+                print('(%s built without the English files)' % os.path.basename(nro))
         else:
             print('(no launcher NRO at %s: skipped)' % nro)
 

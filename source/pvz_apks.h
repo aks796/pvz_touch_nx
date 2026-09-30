@@ -19,6 +19,8 @@ int pvz_apks_find(const char *theRoot);
 const char *pvz_game_apk(void);
 /* The English APK's path; "<root>/english.apk" (absent) when none was found. */
 const char *pvz_english_apk(void);
+/* An English source was found (pvz_english_apk() names it). */
+int pvz_apks_have_english(void);
 /* What was found, for an error screen: "a.apk (English), b.apk (not the game)". */
 const char *pvz_apks_summary(void);
 

@@ -28,6 +28,7 @@
 #include <switch.h>
 
 #include "dcr_exefs.h"
+#include "fwd_mine.h"
 
 #define GAME_DIR "sdmc:/switch/pvz_touch_nx"
 #define OLD_DIR "sdmc:/switch/pvztouch" /* releases before the rename: moved on the first start */
@@ -178,9 +179,13 @@ int main(int argc, char **argv) {
 
   u64 tid = 0;
   svcGetInfo(&tid, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
-  int forwarder = appletGetAppletType() == AppletType_Application && exefs_is_forwarder_tid(tid);
+  int in_05 = appletGetAppletType() == AppletType_Application && exefs_is_forwarder_tid(tid);
+  int forwarder = in_05 && fwd_is_mine(self);
 
   if (!forwarder) {
+    if (in_05)
+      printf("\nThis was opened from inside another icon (sphaira or hbmenu started\n"
+             "from its own HOME-menu icon), so nothing is installed there.\n");
     printf("\nStart this from its own HOME-menu icon:\n"
            "  1. put the APK of your PvZ TV Touch 1.1.5 (com.trans.pvztv, any\n"
            "     file name) in /switch/pvz_touch_nx\n"

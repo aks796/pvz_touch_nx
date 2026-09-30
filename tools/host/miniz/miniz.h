@@ -30,6 +30,7 @@ typedef struct {
   int m_owns;
   mz_zip_archive_file_stat *m_ents;
   mz_uint m_n;
+  char m_path[512]; /* init_file's path: MINIZ_TRACE names the entries read from it */
 } mz_zip_archive;
 
 mz_bool mz_zip_reader_init_file(mz_zip_archive *z, const char *path, mz_uint flags);

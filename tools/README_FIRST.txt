@@ -8,13 +8,10 @@ WHAT YOU NEED ON THE SD CARD
       PvZ TV Touch 1.1.5 (com.trans.pvztv), e.g.
       PvZ-TV-v1.1.5-260925-release.apk (or the 260924 one).
       Keep its name: the game finds it by what is in it.
-  switch/pvz_touch_nx/<any name>.apk     optional, for the game in English:
-      YOUR copy of the English PvZ TV Touch 4.0.5 APK
-      ("PvZTouch 4.0.5 [28-08-24].apk"), name kept too.
-      Only its English pictures, fonts and text are used; the game
-      itself is still 1.1.5. Without it the text is English but the
-      pictures (menu signs, logo, notes) stay Chinese. Needed once:
-      after the first start you may delete it (the English stays).
+  The English pictures, fonts and text come with the NRO: the first
+  start copies them into the folder as "PvZ Touch English.apk" (leave it
+  there). An English APK of your own (PvZTouch 4.0.5 or RedStr1x, any
+  name) in the folder is used instead.
   Atmosphere and sphaira.
 Everything else is made on the console.
 
@@ -34,9 +31,9 @@ SET UP (once)
   2. Launch the new "Plants vs. Zombies Touch" icon on the HOME menu. The launcher
      installs the 32-bit game program for that icon
      (atmosphere/contents/<its title id>/exefs.nsp) and restarts it.
-  3. The first start unpacks the game's three libraries from the game APK
-     and makes the English layer from the English APK (up to half a
-     minute, shown on screen; again only when either APK changes).
+  3. The first start unpacks the game's three libraries from the game APK,
+     copies the English files out of the NRO and makes the English layer
+     (up to half a minute, shown on screen; again only when an APK changes).
 
 UPDATING
   Copy the new pvz_touch_nx.nro over the old one and launch the icon: the

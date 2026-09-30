@@ -32,11 +32,11 @@ edition's controls, the sun vacuum, fast forward, a mod menu, and online and
 local VS.
 
 This release targets **PvZ TV Touch 1.1.5** (`com.trans.pvztv`, build 260925
-or 260924, armeabi-v7a). That version exists only in Chinese. For English,
-add your copy of **PvZTouch 4.0.5**, the English build of the older mod. Its
-pictures, fonts and text are laid over the game.
+or 260924, armeabi-v7a). That version exists only in Chinese. The NRO
+carries the English pictures, fonts and text of **PvZTouch 4.0.5**, the
+English build of the older mod, and lays them over the game.
 
-No game code or data is included. You need your own copy of the APK.
+No game code is included. You need your own copy of the APK.
 
 ---
 
@@ -104,8 +104,12 @@ To build everything, run the host checks and lay out an SD card in `SD_CARD/`:
 tools/package_sd.sh /path/to/game.apk /path/to/english.apk
 ```
 
-The APKs are optional. When given, the checks run against them and they are
-copied into `SD_CARD/`.
+The APKs are optional. When given, the checks run against them and the game
+APK is copied into `SD_CARD/`. The English APK is cut down to the files the
+port reads (`tools/make_english_pack.py`, about 21 MB) into
+`../english_pack/`, outside the project, and built into the NRO.
+`launcher/build.sh` takes the pack from there, or from `PVZ_ENGLISH_PACK`.
+Without one, the NRO is built without English pictures.
 
 ---
 
@@ -118,21 +122,21 @@ Create this folder on the SD card and put the NRO and your APK in it:
 ```text
 sd:/switch/pvz_touch_nx/
 ├── pvz_touch_nx.nro
-├── PvZ-TV-v1.1.5-260925-release.apk
-└── PvZTouch 4.0.5 [28-08-24].apk      (optional, for English)
+└── PvZ-TV-v1.1.5-260925-release.apk
 ```
 
-The file names do not matter as long as they end in `.apk`. The game tells
-the two APKs apart by what is in them.
+The file name does not matter as long as it ends in `.apk`.
 
 1. In sphaira, open **Homebrew > Plants vs. Zombies Touch** and choose
    **Install Forwarder**.
 2. Launch the new icon on the HOME menu. The launcher installs the 32-bit game
    program for that icon and restarts it.
-3. The first start unpacks the game's libraries and makes the English layer,
-   with a progress bar on screen. This takes about half a minute.
+3. The first start unpacks the game's libraries, copies the English files out
+   of the NRO and makes the English layer, with a progress bar on screen.
+   This takes about half a minute.
 
-The English APK is only needed once. After the first start it can be deleted.
+An English APK of your own (PvZTouch 4.0.5 or RedStr1x, any file name) in the
+folder is used instead of the NRO's English files.
 
 Afterwards the folder looks like this:
 
@@ -140,6 +144,7 @@ Afterwards the folder looks like this:
 sd:/switch/pvz_touch_nx/
 ├── pvz_touch_nx.nro
 ├── PvZ-TV-v1.1.5-260925-release.apk
+├── PvZ Touch English.apk  the English files, from the NRO
 ├── config.ini
 ├── libnative_code.so
 ├── libGameMain.so
@@ -224,4 +229,6 @@ This is an unofficial fan project and is not affiliated with, sponsored by or
 endorsed by Nintendo, Electronic Arts, PopCap Games or Transmension. Plants
 vs. Zombies and all related names and trademarks belong to Electronic Arts.
 
-No game code or data is included. You need your own copy of the game's APK.
+The NRO includes the English pictures, fonts and text of the fan-made English
+build (PvZTouch 4.0.5). No game code is included, and the repository holds no
+game files. You need your own copy of the game's APK.

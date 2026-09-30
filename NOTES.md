@@ -384,6 +384,15 @@ files directory, which the engine searches before the APK:
 Fonts need a UTF-8 BOM, and the engine's compiled font cache must be cleared
 whenever a font changes.
 
+The layer reads only 148 of the English APK's 2,020 entries.
+`tools/make_english_pack.py` records which ones by running the layer on the
+host (the host zip reader logs what it extracts, `MINIZ_TRACE`), writes them
+to a 21 MB zip, and checks that the layer made from it is byte-identical. The
+launcher NRO carries that pack as `romfs:/english.apk`. On the first start
+with no English APK in the folder, the game program copies it out as
+`PvZ Touch English.apk` (`dcr_setup_english_from_nro`), and from then on it is
+an English APK like any other.
+
 **APKs under any name.** Both the game and the English source are
 `com.trans.pvztv` with the same engine. `pvz_apks.c` tells them apart by
 content: the English builds carry the translation pak and the game does not.
