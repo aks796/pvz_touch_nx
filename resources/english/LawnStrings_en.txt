@@ -1,0 +1,27 @@
+[ITS_RAINING_SEEDS]
+It's Raining Seeds
+
+[LOGIN_FAILED_CANNOT_RECHARGE_MSG]
+Login failed. Can't add funds.
+
+[OK_BUTTON]
+A
+
+[LOGIN_FAILED_MSG]
+Couldn't connect to the server. Error code: %d
+
+[BACK_BUTTON]
+B
+
+[ADVICE_PLANT_ON_GRASS]
+Press <A> on the grass to plant your seed!
+
+[ADVICE_SELECT_SEED_PACKET]
+Use <L> and <R> to pick a seed packet!
+
+[ADVICE_WHACK_A_ZOMBIE]
+Press <X> to use the mallet!
+
+[SHOP_BUYSUNMONEY_SUCCEEDMSG]
+Now there is extra sun at the start of every game!
+

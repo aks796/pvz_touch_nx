@@ -1,0 +1,1002 @@
+[CACTUS_TOOLTIP_VS]
+Shoots piercing spikes that
+damage multiple enemies
+
+[ICEBERG_LETTUCE]
+Iceberg Lettuce
+
+[ICEBERG_LETTUCE_TOOLTIP]
+Freezes zombies that step on it
+
+[BLOOMERANG]
+Bloomerang
+
+[BLOOMERANG_TOOLTIP]
+Throws a boomerang that hits
+multiple targets twice!
+
+[BONK_CHOY]
+Bonk Choy
+
+[BONK_CHOY_TOOLTIP]
+Rapidly punches enemies in front or behind
+
+[CELERY_STALKER]
+Celery Stalker
+
+[CELERY_STALKER_TOOLTIP]
+Pops out of the ground and attacks zombies from behind
+
+[SPORE_SHROOM]
+Spore-shroom
+
+[SPORE_SHROOM_TOOLTIP]
+Shoots long-range spores and grows new
+Spore-shrooms from defeated zombies
+
+[SWEET_POTATO]
+Sweet Potato
+
+[SWEET_POTATO_TOOLTIP]
+Draws nearby zombies to it
+and blocks their advance
+
+[CHILLY_PEPPER]
+Chilly Pepper
+
+[CHILLY_PEPPER_TOOLTIP]
+Freezes an entire row of zombies
+
+[SUN_BEAN]
+Sun Bean
+
+[SUN_BEAN_TOOLTIP]
+Makes sun whenever a zombie
+that ate it takes damage
+
+[PEANUT]
+Pea-nut
+
+[PEANUT_TOOLTIP]
+Blocks zombies and shoots peas
+
+[ENDURIAN]
+Endurian
+
+[ENDURIAN_TOOLTIP]
+Blocks zombies and hurts
+the zombies that bite it
+
+[AKEE]
+Akee
+
+[AKEE_TOOLTIP]
+Lobs a shot that bounces between zombies
+
+[IMP_PEAR]
+Imp Pear
+
+[IMP_PEAR_TOOLTIP]
+Turns a zombie into an Imp
+
+[REDEYE_GARGANTUAR_ZOMBIE]
+Giga-gargantuar
+
+[PEA_HEAD_ZOMBIE]
+Peashooter Zombie
+
+[WALLNUT_HEAD_ZOMBIE]
+Wall-nut Zombie
+
+[JALAPENO_HEAD_ZOMBIE]
+Jalapeno Zombie
+
+[GATLING_HEAD_ZOMBIE]
+Gatling Pea Zombie
+
+[SQUASH_HEAD_ZOMBIE]
+Squash Zombie
+
+[TALLNUT_HEAD_ZOMBIE]
+Tall-nut Zombie
+
+[GIGA_FOOTBALL_ZOMBIE]
+All-Star Zombie
+
+[SUPER_FAN_IMP]
+Superfan Imp
+
+[JACKSON_ZOMBIE]
+Jackson Zombie
+
+[GIGA_POLE_VAULTING_ZOMBIE]
+Champion Pole Vaulter
+
+[SUNDAY_EDITION_ZOMBIE]
+Sunday Edition Zombie
+
+[EXPLORER_ZOMBIE]
+Explorer Zombie
+
+[ZOMBLOB]
+Zomblob
+
+[GIGA_GARGANTUAR]
+Towering Gargantuar
+
+[DOGWALKER_ZOMBIE]
+Zombie Dog Walker
+
+[TELEPORTATION_ZOMBIE]
+Teleportation Zombie
+
+[SUPER_NOVA_GARGANTUAR]
+Supernova Gargantuar
+
+[CROSSING_GUARD_ZOMBIE]
+Crossing Guard Zombie
+
+[SCIENTIST_ZOMBIE]
+Scientist Zombie
+
+[ZOMBIE_MOUND]
+Summoning Grave
+
+[CONEHEAD_ZOMBIE_DESCRIPTION_HEADER]
+His traffic cone makes him three times as tough as a normal zombie.
+
+[IMP_DESCRIPTION_HEADER]
+Imps are tiny zombies hurled
+into your defenses by Gargantuars.
+
+[REDEYE_GARGANTUAR_ZOMBIE_DESCRIPTION_HEADER]
+Twice as tough as a Gargantuar
+
+[PEA_HEAD_ZOMBIE_DESCRIPTION_HEADER]
+Shoots zombie peas at the enemy
+
+[WALLNUT_HEAD_ZOMBIE_DESCRIPTION_HEADER]
+Blocks plants to shield the zombies behind it
+
+[JALAPENO_HEAD_ZOMBIE_DESCRIPTION_HEADER]
+Burns up an entire row of plants
+
+[GATLING_HEAD_ZOMBIE_DESCRIPTION_HEADER]
+Shoots four zombie peas at a time
+
+[SQUASH_HEAD_ZOMBIE_DESCRIPTION_HEADER]
+Squashes the plants beside it
+
+[TALLNUT_HEAD_ZOMBIE_DESCRIPTION_HEADER]
+A thick wall of nut: twice as tough as a Wall-nut Zombie
+
+[GIGA_FOOTBALL_ZOMBIE_DESCRIPTION_HEADER]
+A zombie in full armor who charges through your defenses
+
+[SUPER_FAN_IMP_DESCRIPTION_HEADER]
+So fired up he explodes. Superfans
+are kicked into your defenses by All-Stars.
+
+[JACKSON_ZOMBIE_DESCRIPTION_HEADER]
+Raises fallen zombies when the Thriller music plays.
+
+[GIGA_POLE_VAULTING_ZOMBIE_DESCRIPTION_HEADER]
+Vaults over obstacles and leaves behind a pole that can be reused.
+
+[SUNDAY_EDITION_ZOMBIE_DESCRIPTION_HEADER]
+His Sunday paper gives him strong protection.
+Careful: don't make him angry.
+
+[EXPLORER_ZOMBIE_DESCRIPTION_HEADER]
+Burns the plants in his way. Zombie peas that
+pass through his torch become fireballs
+
+[ZOMBLOB_DESCRIPTION_HEADER]
+Splits in two when defeated.
+One makes two, two make four...
+
+[GIGA_GARGANTUAR_DESCRIPTION_HEADER]
+Smashes plants with a telephone pole,
+zaps them from afar through the pole,
+and fires the Imp on his back at them
+
+[DOGWALKER_ZOMBIE_DESCRIPTION_HEADER]
+Fights alongside his zombie dogs,
+which lead him into other lanes
+and bite low plants in the two lanes beside
+
+[TELEPORTATION_ZOMBIE_DESCRIPTION_HEADER]
+Fires a teleport beam that sends
+zombies to the left
+and plants to the right
+
+[SUPER_NOVA_GARGANTUAR_DESCRIPTION_HEADER]
+After destroying a plant, wipes out every
+plant of the same kind on the lawn
+
+[CROSSING_GUARD_ZOMBIE_DESCRIPTION_HEADER]
+Throws traffic cones onto nearby Browncoat zombies
+
+[SCIENTIST_ZOMBIE_DESCRIPTION_HEADER]
+Sprays potions that hurt enemies
+and heal injured zombies
+
+[THRILLER_NIGHT]
+Thriller! The dead dance back to life!
+
+[ZOMBIE_MOUND_DESCRIPTION]
+Makes brains and summons zombies.
+Hmm... the more you spend, the stronger it gets.
+
+[ZOMBATAR_NEW_TEXT]
+Your previous Zombatar will be deleted.
+
+[OPTIONS_HAPTIC_FEEDBACK]
+Rumble
+
+[2P_JOIN_TEXT]
+
+
+[CREATE_ROOM_BUTTON]
+Create Room
+
+[JOIN_ROOM_BUTTON]
+Join Room
+
+[PLAY_OFFLINE]
+Local VS
+
+[EXIT_ROOM_BUTTON]
+Close Room
+
+[LEAVE_ROOM_BUTTON]
+Leave Room
+
+[PLAY_ONLINE]
+Start Game
+
+[CONNECT_IP]
+Enter IP
+
+[WIFI_VS]
+Wi-Fi VS
+
+[SERVER_VS]
+Online VS
+
+[MODE_SELECT_TITLE]
+Choose a VS Mode
+
+[NETPLAY_LOBBY_TITLE]
+Multiplayer Lobby
+
+[MODE_WIFI_TITLE]
+Wi-Fi VS
+
+[MODE_SERVER_TITLE]
+Online VS
+
+[BACK_TO_MODE_SELECT]
+Back to Mode Select
+
+[CONNECT_CUSTOM_SERVER]
+Connect to Custom Server
+
+[CHANGE_SERVER]
+Change Server
+
+[DISCONNECT_SERVER]
+Disconnect
+
+[CONNECT_STOP]
+Stop Connecting
+
+[CONNECT_THIS_SERVER]
+Join Server
+
+[OFFICIAL_SERVER_NAME]
+Official %d  %s
+
+[CUSTOM_SERVER_LIST]
+---- Custom Servers ----
+
+[CUSTOM_SERVER_NAME]
+Recent %d  %s
+
+[CUSTOM_SERVER_EMPTY]
+Not set
+
+[KICK_GUEST_BUTTON]
+Kick Guest
+
+[JOIN_SPECIFIED_IP_ROOM]
+Join Room by IP
+
+[START_GAME]
+Start Game
+
+[LOCAL_VS_DESC]
+Local VS: one console, play with friends in the same room
+
+[WIFI_VS_DESC]
+Wi-Fi VS: two devices on the same Wi-Fi
+
+[SERVER_VS_DESC]
+Online VS: two devices, through an internet server
+
+[ROOM_CREATED_FMT]
+Room created: %s's room
+
+[PORT_IF_FMT]
+PORT:%d  Network:%s
+
+[ROOM_SCAN_OPEN_OK]
+Room is visible on the network
+
+[ROOM_SCAN_OPEN_FAIL]
+Could not make the room visible
+
+[WAIT_OTHER_JOIN]
+Waiting for a player to join...
+
+[OTHER_JOINED]
+A player joined! Ready to start!
+
+[JOINING_MANUAL]
+Joining: direct connection
+
+[JOINED_MANUAL]
+Joined: direct connection
+
+[NO_AVAILABLE_ROOMS]
+No rooms available
+
+[JOINING_ROOM_FMT]
+Joining: %s's room
+
+[JOINED_ROOM_FMT]
+Joined: %s's room
+
+[SCANNING_ROOMS]
+Looking for rooms...
+
+[SCAN_FAILED]
+Could not look for rooms
+
+[SCAN_TIP_MANUAL_JOIN]
+(If a room on the same Wi-Fi does not show up, try "Join Room by IP")
+
+[AVAILABLE_ROOMS]
+Available rooms:
+
+[ROOM_LINE_FMT]
+%s's room  %s:%d
+
+[SERVER_CONNECTED]
+Connected to the server
+
+[SERVER_CONNECTING]
+Connecting to the server...
+
+[SERVER_NOT_CONNECTED]
+Not connected to a server
+
+[STATUS_FMT]
+Status: %s
+
+[SERVER_CONNECT_TIP1]
+The official servers are still being built; for now, use a custom server
+
+[SERVER_CONNECT_TIP2]
+Choose "Connect to Server" and enter your server's IP
+
+[SERVER_HOST_ROOM_FMT]
+Room created: id=%d  %s
+
+[SERVER_JOINED_ROOM_FMT]
+Joined room: id=%d
+
+[SERVER_ROOM_LIST_TITLE]
+Rooms on this server:
+
+[SERVER_NO_ROOMS_TIP]
+No rooms yet. Create one!
+
+[TAG_GAMING]
+(In battle)
+
+[GAMING]
+In battle
+
+[TAG_FULL]
+(Full)
+
+[FULL]
+Full
+
+[SERVER_ROOM_LINE_FMT]
+%s (id=%d) %s
+
+[INPUT_TITLE_JOIN_IP]
+Join the room at this IP:
+
+[INPUT_TITLE_CONNECT_SERVER]
+Connect to server:
+
+[STATUS_NOT_CONNECTED]
+Not connected
+
+[STATUS_CONNECTED]
+Connected
+
+[STATUS_CONNECT_FAILED]
+Connection failed
+
+[STATUS_ROOM_CREATED]
+Room created
+
+[STATUS_JOINED_ROOM]
+Joined room
+
+[STATUS_JOIN_FAILED]
+Could not join
+
+[STATUS_GUEST_JOINED]
+Player joined
+
+[STATUS_GUEST_LEFT]
+Player left
+
+[STATUS_ROOM_EXITED]
+Left the room
+
+[STATUS_BATTLE_BEGIN]
+Battle start
+
+[STATUS_SERVER_ERROR_FMT]
+Server error: %d
+
+[STATUS_SEND_CREATE_FAIL]
+Could not send CREATE
+
+[STATUS_SEND_JOIN_FAIL]
+Could not send JOIN
+
+[STATUS_SEND_EXIT_FAIL]
+Could not send EXIT
+
+[STATUS_SEND_LEAVE_FAIL]
+Could not send LEAVE
+
+[STATUS_SEND_START_FAIL]
+Could not send START
+
+[STATUS_ADDR_FORMAT_ERROR]
+Bad address (use IP:PORT)
+
+[STATUS_PORT_ERROR]
+Bad port
+
+[STATUS_IP_ERROR]
+Bad IP
+
+[STATUS_SOCKET_FAIL]
+Socket error
+
+[STATUS_CONNECTING]
+Connecting...
+
+[STATUS_CONNECT_FAIL_ERRNO_FMT]
+Connection failed: %s
+
+[VS_STATUS_IN_ROOM]
+In room
+
+[VS_STATUS_IN_ROOM_MS_FMT]
+In room %dms
+
+[VS_STATUS_HOST]
+Host
+
+[VS_STATUS_HOST_MS_FMT]
+Host %dms
+
+[VS_STATUS_LOCAL_GAME]
+Local VS
+
+[VS_TIP_REMIND_HOST_FMT]
+Host notified:    %s
+
+[VS_TIP_OPPONENT_WANTS_PLAY_FMT]
+Opponent wants to play:    %s
+
+[VS_TIP_OPPONENT_WANTS_GET_FMT]
+Opponent wants:    %s
+
+[VS_OPT_QUICK_GAME]
+Quick Game
+
+[VS_OPT_CUSTOM_ARENA]
+Custom Arena
+
+[VS_OPT_RANDOM_ARENA]
+Random Arena
+
+[VS_OPT_ENABLE_EXTRA_SLOTS]
+Extra Slots: On
+
+[VS_OPT_DISABLE_EXTRA_SLOTS]
+Extra Slots: Off
+
+[VS_OPT_ENABLE_EXTRA_SEEDS]
+Extra Seeds: On
+
+[VS_OPT_DISABLE_EXTRA_SEEDS]
+Extra Seeds: Off
+
+[VS_OPT_ENABLE_BAN_MODE]
+Ban Mode: On
+
+[VS_OPT_DISABLE_BAN_MODE]
+Ban Mode: Off
+
+[VS_OPT_ENABLE_PLANT_AI]
+Plant AI: On
+
+[VS_OPT_DISABLE_PLANT_AI]
+Plant AI: Off
+
+[VS_OPT_ENABLE_ZOMBIE_AI]
+Zombie AI: On
+
+[VS_OPT_DISABLE_ZOMBIE_AI]
+Zombie AI: Off
+
+[VS_OPT_ENABLE_AI_ENHANCEMENT]
+Stronger AI: On
+
+[VS_OPT_DISABLE_AI_ENHANCEMENT]
+Stronger AI: Off
+
+[VS_OPT_ENABLE_BALANCE_PATCH]
+Balance Changes: On
+
+[VS_OPT_DISABLE_BALANCE_PATCH]
+Balance Changes: Off
+
+[VS_OPT_ENABLE_GLOBAL_BP_BO3]
+Multi-round Bans: Best of 3
+
+[VS_OPT_ENABLE_GLOBAL_BP_BO5]
+Multi-round Bans: Best of 5
+
+[VS_OPT_DISABLE_GLOBAL_BP]
+Multi-round Bans: Off
+
+[VS_UI_EXTRA_SLOTS]
+Extra Slots
+
+[VS_UI_EXTRA_SEEDS]
+Extra Seeds
+
+[VS_UI_BAN_MODE]
+Ban Mode
+
+[VS_UI_BALANCE_PATCH]
+Balance Changes
+
+[VS_UI_PLANT_AI]
+Plant AI
+
+[VS_UI_ZOMBIE_AI]
+Zombie AI
+
+[VS_UI_AI_ENHANCEMENT]
+Stronger AI
+
+[VS_UI_AI_SETTINGS]
+AI Settings
+
+[VS_UI_TIMED_DRAFT]
+Timed Draft
+
+[VS_UI_AI_MANUAL_DRAFT]
+No AI picks or bans
+
+[VS_UI_AI_DISABLE_TEMPLATES]
+No AI template decks
+
+[VS_UI_AI_SETTINGS_CLOSE]
+Close
+
+[VS_UI_BAN_PHASE_BIG]
+B   A   N                        P   H   A   S   E
+
+[VS_RESULT_REMIND_HOST_PLAY_AGAIN]
+Asked the host to play again
+
+[VS_RESULT_OPPONENT_REQUEST_PLAY_AGAIN]
+Opponent wants to play again
+
+[VS_RESULT_REMIND_HOST_BACK_TO_MODE_SELECT]
+Asked the host to go back to mode select
+
+[VS_RESULT_OPPONENT_REQUEST_BACK_TO_MODE_SELECT]
+Opponent wants to go back to mode select
+
+[SET_ROOM_PORT]
+Set Room PORT
+
+[INPUT_TITLE_SET_PORT]
+Set port
+
+[HINT_PORT]
+Enter 0 for any free port
+
+[HINT_IP_PORT]
+IP:PORT
+
+[PORT_INVALID_TITLE]
+Bad PORT
+
+[PORT_INVALID_DESC]
+Enter a number from 0 to 65535
+
+[CREATE_ROOM_FAIL_TITLE]
+Could not create the room
+
+[CREATE_ROOM_FAIL_SOCKET]
+Could not create a socket
+
+[CREATE_ROOM_FAIL_BIND]
+PORT %d is in use or not allowed. Choose another PORT
+
+[CREATE_ROOM_FAIL_LISTEN]
+Socket listen failed
+
+[VS_PICK_BATTLES]
+Choose a Battlefield
+
+[MP_VS_SHUFFLE_MODE]
+VS Reroll Mode
+
+[CHALLENGESCREEN_TIP_REMIND_HOST_FMT]
+Host notified:    %s
+
+[CHALLENGESCREEN_TIP_OPPONENT_WANTS_PLAY_FMT]
+Opponent wants to play:    %s
+
+[IF_BCAST_ROOMIP_FMT]
+%s/%s  Room IP=%s:%d
+
+[OTHER_JOINED_FMT]
+%s joined!
+
+[JOINED_MANUAL_FMT]
+Joined: %s's room
+
+[VERSION_ERROR_TITLE]
+Version Mismatch
+
+[VERSION_ERROR_HIGN_DESC]
+The other player has a newer version
+
+[VERSION_ERROR_LOW_DESC]
+The other player has an older version
+
+[SERVER_ROOM_JOINED]
+%s's room
+
+[SERVER_ROOM_VERSION_ERROR]
+Version mismatch
+
+[SUN_RAIN]
+Sun Shower
+
+[ADVICE_SUN_RAIN_COMING]
+A huge sun shower is on its way!
+
+[ADVICE_SUNNY_DAY]
+Double sun falls from the sky this game!
+
+[FREE_SHUFFLE]
+Free Rerolls
+
+[ADVICE_FREE_SHUFFLE]
+Rerolls are free this game!
+
+[QUICK_SHUFFLE]
+Reroll Frenzy
+
+[ADVICE_QUICK_SHUFFLE]
+Rerolls have no cooldown this game!
+
+[P2P_READY]
+P2P OK
+
+[P2P_NOT_READY]
+No P2P
+
+[ROOM_P2P_STATE]
+Host:%s  Guest:%s
+
+[STATUS_CREATING_ROOM]
+Creating room
+
+[STATUS_ROOM_VERSION_ERR]
+Version mismatch
+
+[STATUS_RELAY_WAIT_START]
+Starting soon...
+
+[CONNECTION_CLOSED]
+The other player closed the connection
+
+[CONNECTION_ERROR]
+Connection error
+
+[RECREATE_ROOM]
+Please create the room again
+
+[REENTER_ROOM]
+Please join the room again
+
+[ASK_START]
+Ask to Start
+
+[CLIENT_WANT_START]
+The other player wants to start!
+
+[ASKED_WANT_START]
+Asked the host to start!
+
+[ENABLE_SPECTATE]
+Allow Spectators
+
+[DISABLE_SPECTATE]
+No Spectators
+
+[SPECTATE]
+Spectate
+
+[SPECTATE_AVAILABLE]
+Can spectate
+
+[SPECTATE_QUEUE_AVAILABLE]
+Can queue to spectate
+
+[SPECTATORS_NUM]
+Spectators (%d):
+
+[SPECTATING]
+You are spectating!
+
+[HOST]
+Host
+
+[CLIENT]
+Guest
+
+[JOINED_AS_SPECTATOR]
+Joined as spectator
+
+[SEND_PLAYER_NAME]
+Sending player name
+
+[BANNED_ON_THIS_TURN]
+Banned this round
+
+[NOT_ALLOWED_ON_THIS_PHASE]
+Not allowed right now
+
+[SERVER_ROOM_VERSION_ERROR_LOWER]
+Older build
+
+[SERVER_ROOM_VERSION_ERROR_HIGHER]
+Newer build
+
+[SWITCH_TO_SPECTATOR]
+Spectate Instead
+
+[SWITCH_TO_GUEST]
+Play Instead
+
+[STATUS_START_TIMEOUT]
+Could not start the game
+
+[REPLAY_MANAGE]
+Replays
+
+[REPLAY]
+Replay
+
+[REPLAY_SAVED]
+Replay saved
+
+[SAVE_REPLAY]
+Save Replay
+
+[AUTO_SAVE_REPLAY]
+Auto-save Replays
+
+[REPLAY_TIME_FMT]
+%s  Length: %02d:%02d
+
+[REPLAY_ERROR_VERSION]
+Version mismatch
+
+[REPLAY_ERROR_VERSION_TEXT]
+This replay is from a different game version and can't be played
+
+[HELP_TEXT_3_1]
+Move the handle to pick a side, then a game mode. Quick Game: start with a fixed deck. Custom Arena: take turns picking seeds; the game starts when both players are done. Random Arena: start with a random deck.
+
+[HELP_TEXT_3_2]
+As the plants:
+Defend the lawn left of the red line.
+Collect sun and plant to hold off the zombies.
+Defeat the 3 target zombies to drive them off your lawn.
+
+[HELP_TEXT_3_3]
+As the zombies:
+Place graves to make brain power.
+Pick zombies to attack and defend.
+Break into the house for brains and the win!
+
+[HELP_TEXT_4_1]
+Play with a friend! Choose a challenge and pick your seeds, or just enjoy Adventure mode together!
+
+[HELP_TEXT_4_2]
+When double sun appears, you and your partner must both move your cursors onto it to collect it.
+
+[HELP_TEXT_4_3]
+Use butter! Put the butter glove on a zombie to smear butter on its head.
+
+[HELP_TEXT_5_1]
+Welcome to your house! As your lawn-defending skills improve, Crazy Dave will drop by to fix up the place!
+
+[HELP_TEXT_5_3]
+Every time you earn an achievement, Crazy Dave gets so excited that he puts strange decorations on your lawn!
+
+[REPLAY_PLAY]
+Play
+
+[REPLAY_DELETE]
+Delete
+
+[REPLAY_IMPORT]
+Import
+
+[REPLAY_EXPORT]
+Export
+
+[NO_REPLAY_FILES]
+No replays saved yet
+
+[CONFIRM_DELETE_REPLAY]
+Delete this replay?
+
+[DISCONNECT]
+Disconnect
+
+[VS_RESULT_OPPONENT_DISCONNECTED]
+The other player disconnected
+
+[VS_RESULT_SELF_DISCONNECTED]
+Disconnected
+
+[REPLAY_TOTAL_NUM]
+%d replays
+
+[VS_UI_GLOBAL_BP_CLOSED]
+Multi-round Bans: Off
+
+[VS_UI_GLOBAL_BP_BO3]
+Multi-round Bans: BO3
+
+[VS_UI_GLOBAL_BP_BO5]
+Multi-round Bans: BO5
+
+[QUIT_WHEN_ONLINE_WARNING]
+Disconnect and go back to the main menu?
+
+[SPECTATE_ALIGN_READY]
+You're in the spectator queue!
+
+[RESERVE_SPECTATE]
+Queue to Spectate
+
+[RESERVING_SPECTATE_NEXT_GAME]
+Queued to spectate
+
+[SPECTATE_ROOM_GAMING_CAN_RESERVE]
+Battle in progress
+
+[SPECTATE_RESERVE_STREAM_OPEN]
+Queued (1)
+
+[SPECTATE_RESERVE_WAIT_STREAM]
+Queued (2)
+
+[SPECTATE_RESERVE_WAIT_NEXT_GAME]
+Joining the queue...
+
+[ROOM_STARTED]
+In battle
+
+[SPECTATE_RESERVE_FAILED]
+Could not queue
+
+[SPECTATE_ROOM_CONNECTION_CLOSED]
+The room closed. Please join again
+
+[REPLAY_PAUSE]
+Pause
+
+[REPLAY_RESTART]
+Restart
+
+[REPLAY_SKIP_CHOOSER]
+Skip Seed Select
+
+[REPLAY_SPEED]
+Speed
+
+[NOT_ALLOWED_ON_WATER]
+Can't be placed on water
+
+[ZOMBATAR_SAVE_BODY]
+Your Zombatar has been saved as a .jpg image!
+
+[ZOMBATAR_COLOR_NOT_APPLICABLE]
+This item can't be changed.
+
+[ZOMBATAR_FINISHED_WARNING_TEXT]
+Are you sure you want to make a new Zombatar?
+
+Your previous Zombatar will be deleted.
+
+[ZOMBATAR_FINISHED_BUTTON_TEXT]
+Yes! This one!
+
+[ZOMBATAR_BACK_BUTTON_TEXT]
+Wait! Not done yet!
+
+[ZOMBATAR_START_TEXT]
+A zombie has many parts.
+
+<-- Pick a category on the left
+to change another part.
+
+[ZOMBATAR_VIEW_PORTRAIT]
+Your Zombatar image has been saved.
+
+[CREDITS_EXIT]
+Exit
+
+[SWITCH_HELP_2_1]
+<A>  Plant, collect, select
+
+[SWITCH_HELP_2_2]
+<B>  Dig (hold it on the lawn), back
+
+[SWITCH_HELP_2_3]
+<L> <R>  Previous / next seed packet
+
+[SWITCH_HELP_2_4]
+<l>  Move the cursor
+
+[SWITCH_HELP_2_5]
+<LT> <RT>  Sun magnet on / off
+
+[SWITCH_HELP_2_6]
+<Y>  Fast forward     <X>  Butter, mallet
+
+[SWITCH_HELP_2_7]
+<S>  Pause     <b>  Item bar
+
+[SWITCH_CLOSE]
+<B>  Close
+
+[SWITCH_BACK]
+<B>  Back

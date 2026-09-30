@@ -1,0 +1,21 @@
+# build outputs
+/build/
+/pvz_nx.elf
+/pvz_nx.nsp
+/pvz_nx.build
+/launcher/build/
+/launcher/romfs/
+/launcher/*.nro
+/launcher/*.elf
+/launcher/*.nacp
+/mod/build/
+/mod/out/
+/SD_CARD/
+/SD_CARD.zip
+# the 32-bit Mesa and FFmpeg libraries (mesa32, ffmpeg32), copied in to build
+/portlibs32/
+# logs and captures from a console
+/debug/
+*.log
+.DS_Store
+__pycache__/

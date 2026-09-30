@@ -1,0 +1,86 @@
+/*
+ * Copyright (C) 2023-2026  PvZ TV Touch Team
+ *
+ * This file is part of PlantsVsZombies-AndroidTV.
+ *
+ * PlantsVsZombies-AndroidTV is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * PlantsVsZombies-AndroidTV is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * PlantsVsZombies-AndroidTV.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#ifndef PVZ_LAWN_BOARD_TOOL_TIP_WIDGET_H
+#define PVZ_LAWN_BOARD_TOOL_TIP_WIDGET_H
+
+#include "PvZ/SexyAppFramework/Graphics/Color.h"
+#include "PvZ/SexyAppFramework/Misc/Common.h"
+#include "PvZ/Symbols.h"
+
+namespace Sexy {
+class Graphics;
+}
+
+class ToolTipWidget {
+public:
+    pvzstl::string mTitle;        // 0
+    pvzstl::string mLabel;        // 1
+    pvzstl::string mWarningText;  // 2
+    int mX;                       // 3
+    int mY;                       // 4
+    int mWidth;                   // 5
+    int mHeight;                  // 6
+    bool mVisible;                // 28
+    bool mCenter;                 // 29
+    int mMinLeft;                 // 8
+    int mMaxBottom;               // 9
+    int mGetsLinesWidth;          // 10
+    int mWarningFlashCounter;     // 11
+    Sexy::Font *mWarningTextFont; // 12
+    Sexy::Font *mTitleFont;       // 13
+    Sexy::Color mTitleTextColor;  // 14 ~ 17
+
+    ToolTipWidget() {
+        _constructor();
+    };
+    ~ToolTipWidget() = default;
+
+    void SetWarningText(const pvzstl::string &theWarningText) {
+        reinterpret_cast<void (*)(ToolTipWidget *, const pvzstl::string &)>(ToolTipWidget_SetWarningTextAddr)(this, theWarningText);
+    }
+    void SetTitle(const pvzstl::string &theTitle) {
+        reinterpret_cast<void (*)(ToolTipWidget *, const pvzstl::string &)>(ToolTipWidget_SetTitleAddr)(this, theTitle);
+    }
+    void SetLabel(const pvzstl::string &theLabel) {
+        reinterpret_cast<void (*)(ToolTipWidget *, const pvzstl::string &)>(ToolTipWidget_SetLabelAddr)(this, theLabel);
+    }
+    void GetLines(std::vector<pvzstl::string> &lines) {
+        reinterpret_cast<void (*)(ToolTipWidget *, std::vector<pvzstl::string> &)>(ToolTipWidget_GetLinesAddr)(this, lines);
+    }
+    void Update() {
+        reinterpret_cast<void (*)(ToolTipWidget *)>(ToolTipWidget_UpdateAddr)(this);
+    }
+    void FlashWarning() {
+        reinterpret_cast<void (*)(ToolTipWidget *)>(ToolTipWidget_FlashWarningAddr)(this);
+    }
+
+    void Draw(Sexy::Graphics *g);
+    void CalculateSize();
+
+protected:
+    void _constructor() {
+        reinterpret_cast<void (*)(ToolTipWidget *)>(ToolTipWidget__constructorAddr)(this);
+    }
+};
+
+
+inline void (*old_ToolTipWidget_Draw)(ToolTipWidget *, Sexy::Graphics *);
+
+#endif // PVZ_LAWN_BOARD_TOOL_TIP_WIDGET_H

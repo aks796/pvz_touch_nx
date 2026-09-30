@@ -1,0 +1,76 @@
+/*
+ * Copyright (C) 2023-2026  PvZ TV Touch Team
+ *
+ * This file is part of PlantsVsZombies-AndroidTV.
+ *
+ * PlantsVsZombies-AndroidTV is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * PlantsVsZombies-AndroidTV is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * PlantsVsZombies-AndroidTV.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#ifndef PVZ_LAWN_BOARD_GAME_OBJECT_H
+#define PVZ_LAWN_BOARD_GAME_OBJECT_H
+
+#include "PvZ/Lawn/Common/SyncObject.h"
+#include "PvZ/Symbols.h"
+
+class LawnApp;
+class Board;
+
+namespace Sexy {
+class Graphics;
+}
+
+class GameObject : public SyncObject {
+public:
+    struct GameObjectVTable {                         // 写成普通函数而不写成成员函数，是因为sizeof(MemFunc) == 8，不匹配虚表的size
+        void (*completeDestructor)(GameObject *self); // D2：base object destructor
+        void (*deletingDestructor)(GameObject *self); // D0：deleting destructor
+        bool (*BeginDraw)(GameObject *self, Sexy::Graphics *graphics);
+        void (*EndDraw)(GameObject *self, Sexy::Graphics *graphics);
+        void (*MakeParentGraphicsFrame)(GameObject *self, Sexy::Graphics *graphics);
+    };
+
+    LawnApp *mApp;    // 4
+    Board *mBoard;    // 5
+    int mX;           // 6
+    int mY;           // 7
+    int mWidth;       // 8
+    int mHeight;      // 9
+    bool mVisible;    // 40
+    int mRow;         // 11
+    int mRenderOrder; // 12
+    // 大小13个整数
+
+    bool BeginDraw(Sexy::Graphics *g) {
+        return reinterpret_cast<bool (*)(GameObject *, Sexy::Graphics *)>(GameObject_BeginDrawAddr)(this, g);
+    }
+    void EndDraw(Sexy::Graphics *g) {
+        reinterpret_cast<void (*)(GameObject *, Sexy::Graphics *)>(GameObject_EndDrawAddr)(this, g);
+    }
+    void MakeParentGraphicsFrame(Sexy::Graphics *g) {
+        reinterpret_cast<void (*)(GameObject *, Sexy::Graphics *)>(GameObject_MakeParentGraphicsFrameAddr)(this, g);
+    }
+    const GameObjectVTable *GetVTable() const {
+        return (GameObjectVTable *)vTable;
+    }
+
+protected:
+    GameObject() = default;
+    ~GameObject() = default;
+
+    void _destructor() {
+        reinterpret_cast<bool (*)(GameObject *)>(GameObject_destructorAddr)(this);
+    }
+};
+
+#endif // PVZ_LAWN_BOARD_GAME_OBJECT_H
