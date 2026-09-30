@@ -67,7 +67,21 @@ mz_bool mz_zip_reader_init_file(mz_zip_archive *z, const char *path, mz_uint fla
   fclose(f);
   z->m_size = (size_t)n;
   z->m_owns = 1;
+  snprintf(z->m_path, sizeof z->m_path, "%s", path);
   return parse_cd(z);
+}
+
+/* MINIZ_TRACE=<file>: each entry extracted from an archive opened by path is
+ * appended to <file> as "<archive path>\t<entry>" (tools/make_english_pack.py) */
+static void trace(const mz_zip_archive *z, const char *name) {
+  const char *to = getenv("MINIZ_TRACE");
+  if (!to || !z->m_path[0])
+    return;
+  FILE *f = fopen(to, "a");
+  if (f) {
+    fprintf(f, "%s\t%s\n", z->m_path, name);
+    fclose(f);
+  }
 }
 
 mz_bool mz_zip_reader_end(mz_zip_archive *z) {
@@ -107,6 +121,7 @@ void *mz_zip_reader_extract_to_heap(mz_zip_archive *z, mz_uint i, size_t *len, m
   if (i >= z->m_n)
     return NULL;
   const mz_zip_archive_file_stat *s = &z->m_ents[i];
+  trace(z, s->m_filename);
   const unsigned char *lh = z->m_data + s->m_local_header_ofs;
   if (u32(lh) != 0x04034b50)
     return NULL;

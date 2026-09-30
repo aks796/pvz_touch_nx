@@ -82,6 +82,11 @@ int main(int argc, char *argv[]) {
                 "the game reads its data from it, and its libraries are unpacked\n"
                 "from it on the first launch.",
                 g_root, pvz_apks_summary());
+  /* no English APK in the folder: the English files the launcher NRO carries,
+   * copied out as one on the first start (dcr_setup.c) */
+  int dcr_setup_english_from_nro(void);
+  if (dcr_config()->english && !pvz_apks_have_english() && dcr_setup_english_from_nro() == 1)
+    pvz_apks_find(g_root);
   const char *apk = pvz_game_apk();
   void dcr_apkcache_set_path(const char *real);
   dcr_apkcache_set_path(apk); /* the engine's zip reads of it are cached (dcr_apkcache.c) */

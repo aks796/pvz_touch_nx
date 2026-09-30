@@ -21,6 +21,11 @@
  * by their contents (pvz_apks.c). These names only win a tie. */
 #define DCR_APK_NAME    "game.apk"    /* the game: PvZ TV Touch 1.1.5 */
 #define PVZ_ENGLISH_APK "english.apk" /* optional: the English build of the older mod (pvz_english.c) */
+/* The English files the launcher NRO carries (its romfs:/english.apk, from
+ * tools/make_english_pack.py), copied into the game folder under this name
+ * when the folder has no English APK (dcr_setup.c) */
+#define PVZ_NRO_ENGLISH_ROMFS "english.apk"
+#define PVZ_NRO_ENGLISH_NAME  "PvZ Touch English.apk"
 #define PVZ_PACKAGE     "com.trans.pvztv"
 
 /* The reserved region each game module is mapped into. Measured from this

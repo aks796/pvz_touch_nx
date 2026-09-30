@@ -58,10 +58,11 @@ typedef struct {
 
 static const Opt k_opts[] = {
     {"game", "language", "english",
-     "english or chinese. The game is Chinese. english: the English text; and with\n"
-     "# the English APK in this folder too (your copy of PvZTouch 4.0.5, any file\n"
-     "# name) the English pictures, menu signs and fonts too. Without it the\n"
-     "# pictures stay Chinese and some TV-only lines too. Made on the next start.",
+     "english or chinese. The game is Chinese. english: the English text,\n"
+     "# pictures, menu signs and fonts, from the English files the NRO carries\n"
+     "# (copied here as \"PvZ Touch English.apk\"; an English APK of your own in\n"
+     "# this folder is used instead). Without either, the pictures stay Chinese\n"
+     "# and some TV-only lines too. Made on the next start.",
      K_CHOICE, "english,chinese", N},
     /* ---- the mod's settings screen (its English labels in quotes) ---- */
     {"game", "xbox_pause_menu", "true", "\"Xbox Pause Menu\": the Xbox version's pause menu, with more options.",
@@ -209,10 +210,10 @@ static const Opt k_opts[] = {
     {"debug", "log_java_calls", "false",
      "Write every Java method the game calls to debug.log (slow; for bug reports).", K_BOOL,
      NULL, N},
-    {"debug", "profile_startup_seconds", "90",
-     "For this test build: every thread sampled for this many seconds from the\n"
-     "# first picture, with a report in debug.log every 10 s (where the loading\n"
-     "# time goes). 0 turns it off.",
+    {"debug", "profile_startup_seconds", "0",
+     "Every thread sampled for this many seconds from the first picture, with a\n"
+     "# report in debug.log every 10 s (where the loading time goes). Slows the\n"
+     "# start a little. 0 turns it off.",
      K_CHOICE, NULL, N},
     {"debug", "load_touch_mod", "true",
      "false: start the plain TV edition, without the Touch mod (libHomura), its\n"
@@ -224,7 +225,7 @@ static const Opt k_opts[] = {
      "# the same mod with the Switch controls (the built-in mod menu, the Cheats\n"
      "# button, controller support in the Zombatar and VS screens).",
      K_BOOL, NULL, N},
-    {"config", "version", "1", "Settings file format; leave as it is.", K_CHOICE, NULL, N},
+    {"config", "version", "2", "Settings file format; leave as it is.", K_CHOICE, NULL, N},
 };
 #define O_COUNT ((int)(sizeof k_opts / sizeof k_opts[0]))
 
@@ -331,6 +332,29 @@ static int as_choice(int i) {
   return 0;
 }
 
+static const char k_header[] =
+    "# Plants vs. Zombies Touch for Switch -- settings.\n"
+    "# Changes apply the next time the game starts. Delete this file to get\n"
+    "# the defaults back.\n";
+
+/* Writes every option (with its current value) to config.ini, through a
+ * .part file. */
+static int save_all(const char *path) {
+  char tmp[310];
+  snprintf(tmp, sizeof tmp, "%s.part", path);
+  FILE *f = fopen(tmp, "w");
+  if (!f)
+    return -1;
+  fputs(k_header, f);
+  write_opts(f, 0);
+  if (fclose(f) != 0) {
+    remove(tmp);
+    return -1;
+  }
+  remove(path);
+  return rename(tmp, path);
+}
+
 void dcr_config_load(void) {
   for (int i = 0; i < O_COUNT; i++)
     snprintf(g_val[i], sizeof g_val[i], "%s", k_opts[i].def);
@@ -340,6 +364,20 @@ void dcr_config_load(void) {
   if (f) {
     parse(f);
     fclose(f);
+    /* Version 1 files came with profile_startup_seconds = 90 (a test build's
+     * default): turned off once, with the rest of the file kept. */
+    int ver = opt_index("config", "version");
+    if (atoi(g_val[ver]) < 2) {
+      int prof = opt_index("debug", "profile_startup_seconds");
+      if (!strcmp(g_val[prof], "90"))
+        snprintf(g_val[prof], sizeof g_val[prof], "0");
+      snprintf(g_val[ver], sizeof g_val[ver], "2");
+      if (save_all(path) == 0) {
+        for (int i = 0; i < O_COUNT; i++)
+          g_have[i] = 1;
+        debugPrintf("[config] config.ini updated to version 2 (profile_startup_seconds = %s)\n", g_val[prof]);
+      }
+    }
     int missing = 0;
     for (int i = 0; i < O_COUNT; i++)
       missing += !g_have[i];
@@ -351,10 +389,7 @@ void dcr_config_load(void) {
       debugPrintf("[config] added %d new option%s to config.ini\n", missing, missing > 1 ? "s" : "");
     }
   } else if ((f = fopen(path, "w"))) {
-    fputs("# Plants vs. Zombies Touch for Switch -- settings.\n"
-          "# Changes apply the next time the game starts. Delete this file to get\n"
-          "# the defaults back.\n",
-          f);
+    fputs(k_header, f);
     write_opts(f, 0);
     fclose(f);
     debugPrintf("[config] wrote config.ini with the defaults\n");
