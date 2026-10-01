@@ -11,7 +11,7 @@ tables. This runs the layer on the host against the full APK, with the zip
 reader recording every entry it extracts (tools/host/miniz_host.c,
 MINIZ_TRACE), and writes those entries, unchanged, to a new zip. The console
 finds it as the English source whatever it is called, as long as the name
-ends in .apk: it carries the translation pak (source/pvz_apks.c).
+ends in .apk: it carries the translation pak (PORT_APK_ROLES, source/port_config.h).
 
 Then it proves the pack is enough: the layer is made again from the pack and
 must be byte-identical to the one made from the full APK (the layer list's

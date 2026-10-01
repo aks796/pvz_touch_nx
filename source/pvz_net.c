@@ -22,7 +22,7 @@
  * nifm: one, "wlan0", with the console's address and its subnet's broadcast.
  * Descriptors are libnx's (newlib's, small numbers: select's 1024-bit sets
  * hold them); bionic_io.c's close/fcntl/ioctl/select/poll hand a descriptor
- * this file owns (pvz_net_owns) to it. MIT.
+ * this file owns (port_net_owns) to it. MIT.
  */
 #include <arpa/inet.h>
 #include <errno.h>
@@ -62,7 +62,7 @@ static void trace(const char *fmt, ...) {
   debugPrintf("[net] %s\n", line);
 }
 
-int pvz_net_owns(int fd) { return fd >= 0 && fd < MAX_FD && g_owned[fd]; }
+int port_net_owns(int fd) { return fd >= 0 && fd < MAX_FD && g_owned[fd]; }
 
 static void own(int fd, int yes) {
   if (fd >= 0 && fd < MAX_FD)
@@ -404,14 +404,14 @@ static int n_getpeername(int fd, void *a, unsigned *len) { return name_call(fd, 
 static int n_shutdown(int fd, int how) { return shutdown(fd, how) < 0 ? fail() : 0; }
 
 /* ------------------------------------------- from bionic_io.c's generic calls */
-int pvz_net_close(int fd) {
+int port_net_close(int fd) {
   own(fd, 0);
   return close(fd) < 0 ? fail() : 0;
 }
 
 #define L_F_GETFL_ 3
 #define L_F_SETFL_ 4
-int pvz_net_fcntl(int fd, int cmd, long arg) {
+int port_net_fcntl(int fd, int cmd, long arg) {
   if (cmd == L_F_GETFL_) {
     int fl = fcntl(fd, F_GETFL, 0);
     if (fl < 0)
@@ -453,7 +453,7 @@ static void put_in(uint8_t *sa, uint32_t addr) {
   memcpy(sa + 4, &addr, 4);
 }
 
-int pvz_net_ioctl(int fd, unsigned long req, void *arg) {
+int port_net_ioctl(int fd, unsigned long req, void *arg) {
   uint32_t a, m;
   switch (req) {
   case L_FIONBIO:
@@ -509,7 +509,7 @@ int pvz_net_ioctl(int fd, unsigned long req, void *arg) {
  * A descriptor the console gave up on (after sleep, a reset connection)
  * reports only an error: the bits asked for are added, so the caller goes
  * on to read or check SO_ERROR and learns of it, instead of waiting forever. */
-short pvz_net_ready(int fd, short events) {
+short port_net_ready(int fd, short events) {
   struct pollfd p = {fd, events, 0};
   if (poll(&p, 1, 0) < 0)
     return 0x20; /* POLLNVAL */
@@ -545,7 +545,7 @@ static uint16_t l_port(int fd) {
 
 static int wait_ready(int fd, short ev, int ms) {
   for (int i = 0; i < ms; i++) {
-    short r = pvz_net_ready(fd, ev);
+    short r = port_net_ready(fd, ev);
     if (r & ev)
       return 1;
     svcSleepThread(1000000);
@@ -615,14 +615,14 @@ static void selftest(void) {
       bc = "OK (heard its own)";
     else
       bc = "sent (not heard back here, which is fine)";
-    if (rx >= 0) pvz_net_close(rx);
-    if (tx >= 0) pvz_net_close(tx);
+    if (rx >= 0) port_net_close(rx);
+    if (tx >= 0) port_net_close(tx);
   }
   debugPrintf("[net] self-test: TCP to itself %s, UDP to itself %s, LAN broadcast %s\n", tcp, udp, bc);
   int fds[] = {ls, cs, as, us};
   for (unsigned i = 0; i < sizeof fds / sizeof fds[0]; i++)
     if (fds[i] >= 0)
-      pvz_net_close(fds[i]);
+      port_net_close(fds[i]);
 }
 
 /* ---------------------------------------------------------------- table */

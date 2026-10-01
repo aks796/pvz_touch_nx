@@ -25,18 +25,18 @@ void *pvz_native(const char *symbol);
 
 /* pvz_text.c: NativeView.showTextInputDialog / the mod's showTextInputDialog2 /
  * showIme. mod: 0 -> reply with NativeView.onTextInputNative, 1 ->
- * onTextInputNative2, PVZ_TEXT_IME -> onTextChangedNative (the field keeps the
- * text, unsubmitted). The keyboard opens from the UI thread loop
+ * onTextInputNative2, PVZ_TEXT_IME -> onTextChangedNative, then Return in the
+ * field (pvz_text_frame). The keyboard opens from the UI thread loop
  * (pvz_text_input_poll). */
 #define PVZ_TEXT_IME 2
 void pvz_text_input_request(int mod, int mode, const char *title, const char *hint,
                             const char *initial);
 /* the edit field's held request (pvz_text.c): hideIme; each frame on the
- * engine's thread, the focused widget and its rectangle (game pixels); A down
- * (1: the keyboard comes up for it, so the game does not get the A); a touch
- * down, in game pixels */
+ * engine's thread, the focused widget and its rectangle (game pixels) (1:
+ * press Return in it now); A down (1: the keyboard comes up for it, so the
+ * game does not get the A); a touch down, in game pixels */
 void pvz_text_ime_hidden(void);
-void pvz_text_frame(void *focus, int x, int y, int w, int h);
+int pvz_text_frame(void *focus, int x, int y, int w, int h);
 int pvz_text_press_a(void);
 void pvz_text_touch(float x, float y);
 void pvz_text_input_poll(void);

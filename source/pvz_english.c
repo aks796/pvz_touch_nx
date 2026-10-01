@@ -26,7 +26,9 @@
  *   pictures  each file of the pak that game.apk has exactly as the pak has it
  *             (the same Chinese original): english.apk's version. Where the
  *             newest mod changed the file itself, a short list (k_take_en)
- *             says which still take the English one; the rest stay.
+ *             says which still take the English one; the rest stay. Another
+ *             (k_keep_game) keeps the game's own: English pictures with the
+ *             Xbox 360 edition's prompts painted in.
  *   menus     the English builds keep the main menu's signs in an atlas
  *             (reanim/mainmenu3/menu-atlas1.tex) that game.apk does not use:
  *             it has one PNG per sign. Each sign whose English picture differs
@@ -66,7 +68,7 @@
  * key matches, and the fix to it never reaches a card that has one (hardware
  * run 16: the UTF-8 font fix, made with the version unchanged, never ran --
  * and the engine kept loading its compiled copy of the broken font). */
-#define LAYER_VERSION 10
+#define LAYER_VERSION 11
 #define FILES "assets/files/"
 
 /* Files the newest mod changed from the Chinese original that still take the
@@ -86,6 +88,16 @@ static const char *const k_take_en[] = {
     "images/survival_button.png",
     "reanim/mainmenu3/almanac plant 10.png",
     "images/guide.png", /* the start-up copyright notice */
+    NULL,
+};
+
+/* English pictures never taken, though the game's are the Chinese original's.
+ * The English build's Crazy Dave speech bubble has the Xbox 360 edition's
+ * "PRESS (A) TO CONTINUE" painted in, and the game writes its own
+ * [CLICK_TO_CONTINUE] in the same place: the prompt came out twice, in two
+ * fonts (tester, 2026-09-30). The game's bubble is blank. Lower case. */
+static const char *const k_keep_game[] = {
+    "images/store_speechbubble2.png",
     NULL,
 };
 
@@ -1577,9 +1589,9 @@ static int zombatar_back(Ctx *x) {
 }
 
 /* ---------------------------------------------------------------- pictures */
-static int take_en(const char *lrel) {
-  for (int i = 0; k_take_en[i]; i++)
-    if (!strcmp(lrel, k_take_en[i]))
+static int in_list(const char *lrel, const char *const *list) {
+  for (int i = 0; list[i]; i++)
+    if (!strcmp(lrel, list[i]))
       return 1;
   return 0;
 }
@@ -1624,12 +1636,12 @@ static void make_assets(Ctx *x) {
       if (ei < 0)
         continue;
       mz_uint32 cc = entry_crc(&x->c, (int)i), ec = entry_crc(&x->e, ei), gc = entry_crc(x->g, gi);
-      if (ec == cc)
-        continue; /* the English build left it Chinese too */
+      if (ec == cc || in_list(low, k_keep_game))
+        continue; /* the English build left it Chinese too; or the game's is right */
       if (gc == cc) {
         if (copy_e(x, ei, name) == 0)
           x->n_swap++;
-      } else if (take_en(low)) {
+      } else if (in_list(low, k_take_en)) {
         if (copy_e(x, ei, name) == 0)
           x->n_take++;
       } else if ((!strcasecmp(name, ZB_BG) || !strcasecmp(name, ZB_HL)) && zombatar_back(x)) {

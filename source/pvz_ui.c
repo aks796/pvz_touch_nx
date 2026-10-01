@@ -28,9 +28,12 @@
  * buttons' order on screen, among those shown (hardware run 10).
  *
  * THE KEYBOARD'S FIELD. pvz_text.c holds an edit field's keyboard request
- * until A: it learns here, each frame, which widget has the focus.
+ * until A: it learns here, each frame, which widget has the focus. After the
+ * Switch keyboard's OK it asks for a Return in the field, pressed here
+ * (AndroidAppDriver::InjectKeyEvent: a key down and up, Sexy's KeyCode).
  *
- * Offsets (libGameMain 1.1.5): LawnApp::mWidgetManager +0x294,
+ * Offsets (libGameMain 1.1.5): LawnApp::mWidgetManager +0x294, the app driver
+ * +0x2ec (EditWidget::ShowKeyboard),
  * mGameSelector (the MainMenu) +0x8a8 (KillMainMenu), mHelpTextScreen +0x8b4
  * (ShowHelpTextScreen); WidgetManager::mFocusWidget +0xa0,
  * Widget::mWidgetManager +0x18 (WidgetManager::SetFocus); Widget mX mY mWidth
@@ -49,8 +52,10 @@ extern so_module g_mod_game;
 
 typedef void (*fn_set_focus)(void *wm, void *widget);
 typedef void *(*fn_find_widget)(void *container, int id);
+typedef void (*fn_inject_key)(void *driver, int key, int flags);
 
 #define APP_WIDGET_MANAGER 0x294
+#define APP_DRIVER 0x2ec /* SexyAppBase::mAppDriver, the AndroidAppDriver */
 #define APP_HELP_SCREEN 0x8b4
 #define WM_FOCUS 0xa0
 #define WIDGET_MANAGER 0x18
@@ -198,8 +203,9 @@ static void zombatar_link(void *app) {
 }
 
 /* For pvz_text.c's held keyboard request: the widget with the focus (down
- * the focused children) and its rectangle on the screen. */
-static void text_field_focus(void *wm) {
+ * the focused children) and its rectangle on the screen; and the Return it
+ * asks for. */
+static void text_field_focus(void *app, void *wm, fn_inject_key inject_key) {
   void *w = AT(wm, WM_FOCUS);
   for (int i = 0; w && AT(w, W_FOCUSED_CHILD) && i < 16; i++)
     w = AT(w, W_FOCUSED_CHILD);
@@ -207,12 +213,15 @@ static void text_field_focus(void *wm) {
   void *p = w;
   for (int i = 0; p && p != wm && i < 16; i++, p = AT(p, W_PARENT))
     x += INT(p, W_X), y += INT(p, W_Y);
-  pvz_text_frame(w, x, y, w ? INT(w, W_W) : 0, w ? INT(w, W_H) : 0);
+  if (pvz_text_frame(w, x, y, w ? INT(w, W_W) : 0, w ? INT(w, W_H) : 0) && inject_key &&
+      AT(app, APP_DRIVER))
+    inject_key(AT(app, APP_DRIVER), 0x0d /* KEYCODE_RETURN */, 0);
 }
 
 void pvz_ui_frame(void) {
   static void **lawn_app;
   static fn_set_focus set_focus;
+  static fn_inject_key inject_key;
   static int looked;
   static void *help_seen, *covered;
   if (!looked) {
@@ -222,6 +231,10 @@ void pvz_ui_frame(void) {
                                                   "_ZN4Sexy13WidgetManager8SetFocusEPNS_6WidgetE");
     find_widget = (fn_find_widget)so_try_find_addr_rx(&g_mod_game,
                                                       "_ZN4Sexy15WidgetContainer10FindWidgetEi");
+    inject_key = (fn_inject_key)so_try_find_addr_rx(&g_mod_game,
+                                                    "_ZN4Sexy16AndroidAppDriver14InjectKeyEventEii");
+    if (!inject_key)
+      debugPrintf("[ui] AndroidAppDriver::InjectKeyEvent missing: the keyboard's OK does not submit\n");
     if (!lawn_app || !set_focus)
       debugPrintf("[ui] engine symbols missing: help-screen focus fix off\n");
   }
@@ -231,7 +244,7 @@ void pvz_ui_frame(void) {
   void *app = *lawn_app, *wm = AT(app, APP_WIDGET_MANAGER), *help = AT(app, APP_HELP_SCREEN);
   if (!wm)
     return;
-  text_field_focus(wm);
+  text_field_focus(app, wm, inject_key);
   zombatar_link(app);
   if (!help) {
     if (help_seen) {

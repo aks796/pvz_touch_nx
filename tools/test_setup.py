@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host test for the console-side setup code (source/dcr_exefs.h, dcr_formats.h).
+"""Host test for the console-side setup code (the runtime's dcr_exefs.h, dcr_formats.h).
 
 Compiles the two headers natively and checks them against the Python tools
 they replace on the console:
@@ -63,7 +63,8 @@ def main():
         src = os.path.join(t, 'h.c')
         open(src, 'w').write(HARNESS)
         exe = os.path.join(t, 'h')
-        subprocess.check_call(['cc', '-O1', '-Wall', '-I', os.path.join(TOP, 'source'), '-o', exe, src])
+        subprocess.check_call(['cc', '-O1', '-Wall', '-DPORT_PAYLOAD_NAME="pvz_nx"', '-I', os.path.join(TOP, 'source'),
+                               '-I', os.path.join(TOP, 'runtime', 'source'), '-o', exe, src])
 
         # 1. the override
         tid = 0x0571D2F4CB1CF000
@@ -100,7 +101,7 @@ def main():
                 assert open(p, 'rb').read() == open(ref, 'rb').read(), name + ' in the NRO differs'
             assert b == open(os.path.join(TOP, 'pvz_nx.build')).read().strip(), 'build number'
             print('OK: %s carries pvz_nx.nsp and build %s' % (os.path.basename(nro), b))
-            # the English files, when it was built with them (dcr_setup_english_from_nro)
+            # the English files, when it was built with them (pvz_main.c port_after_apk_find)
             ref = os.path.join(TOP, 'launcher', 'romfs', 'english.apk')
             p = os.path.join(t, 'english.apk')
             if os.path.exists(ref):

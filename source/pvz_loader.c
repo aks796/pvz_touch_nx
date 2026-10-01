@@ -44,14 +44,15 @@
 #include "codespace.h"
 #include "config.h"
 #include "dcr_config.h"
+#include "dcr_path.h"
 #include "error.h"
+#include "exc_handler.h"
 #include "imports.h"
 #include "pvz_net.h"
+#include "rt_settings.h"
 #include "selfproc.h"
 #include "so_util.h"
 #include "util.h"
-
-const char *dcr_game_root(void); /* main.c */
 
 so_module g_mod_native, g_mod_game, g_mod_homura;
 
@@ -129,7 +130,9 @@ static void pool_seal(void) {
 static int in_pool(const void *p) {
   return g_pool && (const uint8_t *)p >= g_pool && (const uint8_t *)p < g_pool + POOL_BYTES;
 }
-int pvz_in_pool(const void *p) { return in_pool(p); } /* crash reports */
+/* Crash reports and the watchdog name an address in the pool so, and count
+ * it as code in their stack scans (the runtime's exc_handler.c). */
+const char *port_code_region(uint32_t a) { return in_pool((const void *)a) ? "hook trampoline" : NULL; }
 
 /* ============================================================ mm policy */
 void *cs_mmap(size_t len, int prot, const void *caller) {
@@ -280,50 +283,15 @@ static int fix_linux_cacheflush(so_module *m) {
   return n;
 }
 
-/* libgcc's __sync_* on ARM Linux call the kernel's user helpers through
- * literal pools (kuser.S). Point every such literal in the module's code at
- * ours; any other helper address is reported, not guessed at. */
-void dcr_kuser_cmpxchg(void);
-void dcr_kuser_memory_barrier(void);
-
-static void fix_kuser_helpers(so_module *m) {
-  int cmpxchg = 0, barrier = 0, other = 0;
-  for (int i = 0; i < m->phnum; i++) {
-    const Elf32_Phdr *ph = &m->phdr[i];
-    if (ph->p_type != PT_LOAD || !(ph->p_flags & PF_X))
-      continue;
-    uint32_t *w = (uint32_t *)((uintptr_t)((uint8_t *)m->load_base + ph->p_vaddr + 3) & ~3u);
-    size_t nw = ph->p_filesz / 4;
-    for (size_t k = 0; k < nw; k++) {
-      if ((w[k] & 0xfffff000u) != 0xffff0000u || (w[k] & 0xfff) < 0xf60)
-        continue;
-      if (w[k] == 0xffff0fc0u) {
-        w[k] = (uint32_t)(uintptr_t)dcr_kuser_cmpxchg;
-        cmpxchg++;
-      } else if (w[k] == 0xffff0fa0u) {
-        w[k] = (uint32_t)(uintptr_t)dcr_kuser_memory_barrier;
-        barrier++;
-      } else if (w[k] == 0xffff0f60u || w[k] == 0xffff0fe0u || w[k] == 0xffff0ffcu) {
-        if (other++ < 4)
-          debugPrintf("[boot] %s+0x%x: kernel helper 0x%08x not provided\n", m->base_name,
-                      (unsigned)((uintptr_t)&w[k] - (uintptr_t)m->load_base), (unsigned)w[k]);
-      }
-    }
-  }
-  if (cmpxchg || barrier || other)
-    debugPrintf("[boot] %s: libgcc atomics -> kuser.S (%d cmpxchg, %d barrier%s)\n",
-                m->base_name, cmpxchg, barrier, other ? ", others NOT handled" : "");
-}
-
 /* ============================================================= loading */
 static int load_one(so_module *mod, const char *name) {
   char path[512];
   snprintf(path, sizeof path, "%s/%s", dcr_game_root(), name);
-  int rc = so_load(mod, path, NULL, SO_REGION_BYTES);
+  int rc = so_load(mod, path, NULL, PORT_SO_REGION_BYTES);
   if (rc < 0) {
     const char *why = rc == -1 ? "cannot open it, or it is not a 32-bit ARM ELF"
                     : rc == -2 ? "out of memory"
-                    : rc == -3 ? "larger than SO_REGION_BYTES"
+                    : rc == -3 ? "larger than PORT_SO_REGION_BYTES"
                     : rc == -4 ? "too many program headers" : "?";
     debugPrintf("[boot] so_load(%s) failed rc=%d: %s\n", path, rc, why);
     return -1;
@@ -338,22 +306,6 @@ static int load_one(so_module *mod, const char *name) {
  * use it too.) */
 static int with_mod(void) { return dcr_config()->load_mod; }
 
-/* pvz_net_imports, then the generic table (so_resolve takes the first match). */
-static DynLibFunction *with_net_imports(int *count) {
-  static DynLibFunction *t;
-  if (!t) {
-    t = malloc(sizeof *t * (size_t)(pvz_net_imports_count + dcr_imports_count));
-    if (!t) {
-      *count = dcr_imports_count;
-      return dcr_imports;
-    }
-    memcpy(t, pvz_net_imports, sizeof *t * (size_t)pvz_net_imports_count);
-    memcpy(t + pvz_net_imports_count, dcr_imports, sizeof *t * (size_t)dcr_imports_count);
-  }
-  *count = pvz_net_imports_count + dcr_imports_count;
-  return t;
-}
-
 int pvz_load_modules(void) {
   if (load_one(&g_mod_native, PVZ_LIB_NATIVE) < 0 || load_one(&g_mod_game, PVZ_LIB_GAME) < 0 ||
       (with_mod() && load_one(&g_mod_homura, PVZ_LIB_HOMURA) < 0))
@@ -363,17 +315,22 @@ int pvz_load_modules(void) {
   so_module *mods[] = {&g_mod_native, &g_mod_game, &g_mod_homura};
   int nmods = with_mod() ? 3 : 2;
   for (int i = 0; i < nmods; i++) {
-    DynLibFunction *table = dcr_imports;
+    /* The mod's multiplayer gets real sockets (pvz_net.c): its own table,
+     * which so_resolve searches before the shared ones -- only libHomura's
+     * imports (not port_imports, which every module and dlsym would see). */
+    const DynLibFunction *table = dcr_imports;
     int count = dcr_imports_count;
-    if (mods[i] == &g_mod_homura) /* the mod's multiplayer: real sockets (pvz_net.c) */
-      table = with_net_imports(&count);
+    if (mods[i] == &g_mod_homura) {
+      table = pvz_net_imports;
+      count = pvz_net_imports_count;
+    }
     int missing = so_resolve(mods[i], table, count, 1);
     debugPrintf("[boot] %-18s %6u KB  staged %p -> %p  (%d unresolved imports)\n",
                 mods[i]->base_name, (unsigned)(mods[i]->load_size >> 10), mods[i]->load_base,
                 mods[i]->load_virtbase, missing);
   }
-  fix_kuser_helpers(&g_mod_native);
-  fix_kuser_helpers(&g_mod_game);
+  so_fix_kuser_helpers(&g_mod_native); /* libgcc's atomics -> kuser.S */
+  so_fix_kuser_helpers(&g_mod_game);
   if (!with_mod()) {
     debugPrintf("[boot] config.ini [debug] load_touch_mod = false: the TV edition without the mod\n");
     so_finalize(&g_mod_native);

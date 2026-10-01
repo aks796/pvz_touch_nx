@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Host test for source/pvz_apks.c: the old folder's move and the APKs told
-apart by their contents.
+"""Host test for the runtime's rt_migrate.c and rt_apkfind.c with this port's
+settings (source/port_config.h: PORT_OLD_ROOT_PATHS, RT_MIGRATE_ONCE_MARKER,
+PORT_APK_ROLES): the old folder's move and the APKs told apart by their
+contents.
 
     python3 tools/test_apks.py <game.apk> <english.apk> [other game.apk] [not-the-game.apk]
 
@@ -20,22 +22,32 @@ The APKs are hard-linked (not copied) into a scratch SD card under odd names:
 import os, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.join(os.path.dirname(HERE), 'source')
+TOP = os.path.dirname(HERE)
+SRC = os.path.join(TOP, 'source')
+RT = os.path.join(TOP, 'runtime', 'source')
 
 HARNESS = r'''
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include "pvz_apks.h"
-static char root[512];
-const char *dcr_game_root(void) { return root; }
-void debugPrintf(const char *fmt, ...) { va_list a; va_start(a, fmt); vprintf(fmt, a); va_end(a); }
+#include "rt_settings.h"
+#include "rt_apkfind.h"
+#include "rt_migrate.h"
+static const RtApkRole roles[] = {PORT_APK_ROLES};
+static void logf(const char *fmt, ...) { va_list a; va_start(a, fmt); vprintf(fmt, a); va_end(a); }
 int main(int argc, char **argv) {  /* move|find <root> */
   (void)argc;
-  snprintf(root, sizeof root, "%s", argv[2]);
-  if (!strcmp(argv[1], "move")) { pvz_old_folder_move(root); pvz_old_folder_report(); return 0; }
-  int rc = pvz_apks_find(root);
-  printf("RC=%d\nGAME=%s\nENGLISH=%s\nSUMMARY=%s\n", rc, pvz_game_apk(), pvz_english_apk(), pvz_apks_summary());
+  if (!strcmp(argv[1], "move")) {
+    RtMigrateResult r;
+    memset(&r, 0, sizeof r);
+    rt_migrate_port(argv[2], 1, NULL, &r);
+    if (r.msg[0]) printf("%s\n", r.msg);
+    return 0;
+  }
+  RtApkEnv env = {NULL, logf, 1};
+  RtApkFound f;
+  int rc = rt_apk_find(argv[2], roles, (int)(sizeof roles / sizeof roles[0]), &env, &f);
+  printf("RC=%d\nGAME=%s\nENGLISH=%s\nSUMMARY=%s\n", rc, f.path[0], f.path[1], f.summary);
   return 0;
 }
 '''
@@ -70,10 +82,10 @@ def main():
     with tempfile.TemporaryDirectory() as t:
         exe = os.path.join(t, 'h')
         open(os.path.join(t, 'h.c'), 'w').write(HARNESS)
-        subprocess.check_call(['cc', '-O1', '-g', '-Wall', '-Wextra', '-fsanitize=address,undefined',
-                               '-I', os.path.join(HERE, 'host'), '-I', SRC, os.path.join(t, 'h.c'),
-                               os.path.join(SRC, 'pvz_apks.c'), os.path.join(HERE, 'host', 'miniz_host.c'),
-                               '-lz', '-o', exe])
+        subprocess.check_call(['cc', '-O1', '-g', '-Wall', '-Wextra', '-Wno-unused-parameter',
+                               '-fsanitize=address,undefined', '-DPORT_PAYLOAD_NAME="pvz_nx"',
+                               '-I', SRC, '-I', RT, os.path.join(t, 'h.c'),
+                               os.path.join(RT, 'rt_apkfind.c'), os.path.join(RT, 'rt_migrate.c'), '-o', exe])
         card = os.path.join(t, 'card')  # the harness runs here: "sdmc:/..." is card/sdmc:/...
         old = os.path.join(card, 'sdmc:', 'switch', 'pvztouch')
         new = os.path.join(card, 'sdmc:', 'switch', 'pvz_touch_nx')
@@ -105,7 +117,7 @@ def main():
               'the game APK the new folder already has stays in the old folder')
         check(open(n('data/files/cached/x.cfu2'), 'rb').read() == b'new cache', 'merged: the new folder\'s file wins')
         check(os.path.exists(n('.moved')), '.moved written')
-        check('moved 6 items' in log or 'moved 7 items' in log, 'the move is logged')
+        check('moved' in log.lower() and 'pvztouch' in log, 'the move is logged')
         put(o('late.txt'))
         log2 = run('move', root)
         check(log2 == '' and os.path.exists(o('late.txt')), 'a second start moves nothing')
@@ -117,6 +129,7 @@ def main():
         sys.stdout.write(out)
         check('GAME=' + root + '/Plants vs Zombies 1.1.5 (my copy).apk\n' in out, 'the game found under any name')
         check('ENGLISH=' + root + '/english.apk\n' in out, 'the English source found')
+        check('GAME=' + root + '/english.apk' not in out, 'the English APK is not taken for the game')
         check('._Plants' not in out, 'macOS resource forks ignored')
         os.rename(n('english.apk'), n('PvZTouch 4.0.5 [28-08-24].apk'))
         out = run('find', root)

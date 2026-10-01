@@ -7,11 +7,9 @@
 extern DynLibFunction pvz_net_imports[];
 extern int pvz_net_imports_count;
 
-/* For bionic_io.c: a descriptor from these sockets, and its generic calls. */
-int pvz_net_owns(int fd);
-int pvz_net_close(int fd);
-int pvz_net_fcntl(int fd, int cmd, long arg);
-int pvz_net_ioctl(int fd, unsigned long req, void *arg);
-short pvz_net_ready(int fd, short events);
+/* For the runtime's bionic_io.c (dcr_net.h): a descriptor from these
+ * sockets, and its generic calls -- port_net_owns/close/fcntl/ioctl/ready,
+ * defined in pvz_net.c. */
+#include "dcr_net.h"
 
 #endif

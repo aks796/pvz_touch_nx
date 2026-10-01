@@ -9,7 +9,9 @@
  * and an edit field (the cheat code dialog's) asks for the soft keyboard:
  *   NativeView.showIme(flags)   the typing goes to its hidden EditText, whose
  *       changes reach the field as onTextChangedNative(handle, text, selection
- *       start, end, time); the dialog's own OK button then submits it.
+ *       start, end, time); Android's keyboard's Done then sends Enter, which
+ *       submits it (EditWidget: Return -> EditListener::EditWidgetText; the
+ *       new player dialog takes it as its OK).
  * Here both open the system keyboard applet. The request arrives on the UI
  * thread inside libnative_code's work callback; the keyboard is shown from the
  * UI thread loop right after (pvz_text_input_poll), not inside the callback.
@@ -24,6 +26,12 @@
  * is the keyboard's, not the game's, as often as it is pressed. A tap inside
  * the focused widget's rectangle (followed on the engine's thread between
  * frames: pvz_text_frame, from pvz_ui_frame) opens it too.
+ *
+ * The Switch keyboard's OK is that Done: the text, then Return in the field
+ * (AndroidAppDriver::InjectKeyEvent, on the engine's thread: pvz_ui.c), as the
+ * engine does itself with a dialog's answer (AndroidAppDriver::
+ * HandleInputEvents). Without it the new player's name stayed in the field,
+ * and A there only brought the keyboard back (tester, 2026-09-30).
  * mode is the Java one: 1 password, 2 URI, 3 e-mail, 4 visible password,
  * else plain text. MIT.
  */
@@ -33,6 +41,7 @@
 
 #include "jni.h"
 #include "pvz.h"
+#include "rt_applet.h"
 #include "util.h"
 
 static Mutex g_lock;
@@ -48,7 +57,12 @@ static struct {
   void *field;           /* that widget (engine thread only) */
   volatile int on_field; /* it still has the focus */
   volatile int x, y, w, h; /* its rectangle, in game pixels */
+  volatile int submit;     /* frames until Return in it (the keyboard's OK) */
 } H;
+
+/* frames between the text and the Return: the text event is the engine's
+ * next frame's, the Return comes after it */
+#define SUBMIT_FRAMES 3
 
 void pvz_text_input_request(int mod, int mode, const char *title, const char *hint,
                             const char *initial) {
@@ -79,27 +93,34 @@ void pvz_text_ime_hidden(void) {
   mutexUnlock(&g_lock);
 }
 
-void pvz_text_frame(void *focus, int x, int y, int w, int h) {
+int pvz_text_frame(void *focus, int x, int y, int w, int h) {
+  int ret = 0;
+  if (H.submit > 0 && --H.submit == 0) {
+    ret = focus != NULL && focus == H.field;
+    debugPrintf("[text] %s\n", ret ? "Return in the field" : "the field lost the focus: no Return");
+  }
   if (!H.held)
-    return;
+    return ret;
   if (H.capture) {
     H.field = focus;
     H.capture = 0;
   }
   H.x = x, H.y = y, H.w = w, H.h = h;
   H.on_field = focus != NULL && focus == H.field;
+  return ret;
 }
 
-/* the held request, shown now (and again on the next A, until hideIme) */
+/* the held request, shown now (and again on the next A, until hideIme); not
+ * while the last text is still going in (the A is the field's all the same) */
 static int show_held(void) {
   mutexLock(&g_lock);
-  const int go = H.held;
+  const int held = H.held, go = held && H.submit == 0;
   if (go)
     R.pending = 1;
   mutexUnlock(&g_lock);
   if (go)
     debugPrintf("[text] the keyboard for the field\n");
-  return go;
+  return held;
 }
 
 int pvz_text_press_a(void) { return show_held(); }
@@ -123,7 +144,7 @@ static jint utf16_len(const char *s) {
 }
 
 static void reply(int mod, const char *text) {
-  if (mod == PVZ_TEXT_IME) { /* the field shows it; nothing is submitted */
+  if (mod == PVZ_TEXT_IME) { /* the field's text, then Return in it (the top) */
     if (!text)
       return;
     fn_changed f = (fn_changed)pvz_native("Java_com_transmension_mobile_NativeView_onTextChangedNative");
@@ -133,6 +154,8 @@ static void reply(int mod, const char *text) {
       f(g_jni_env, g_view, pvz_native_handle(), s, end, end,
         (jlong)(armTicksToNs(armGetSystemTick()) / 1000000ull));
     jni_release(s);
+    if (f)
+      H.submit = SUBMIT_FRAMES;
     return;
   }
   JObj *s = text ? jni_str(text) : NULL;
@@ -186,7 +209,9 @@ void pvz_text_input_poll(void) {
     swkbdConfigSetInitialText(&kbd, initial);
   swkbdConfigSetStringLenMax(&kbd, 64);
   char out[256] = {0};
+  dcr_applet_busy(1); /* no frames while it is up, and nothing wrong (watchdog, boost) */
   rc = swkbdShow(&kbd, out, sizeof out);
+  dcr_applet_busy(0);
   swkbdClose(&kbd);
   if (R_SUCCEEDED(rc)) {
     if (alnum) { /* the Java InputFilter: anything else is refused */

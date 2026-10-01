@@ -2,7 +2,7 @@
 """stage_sd.py -- put YOUR copy of PvZ TV Touch where the wrapper looks.
 
 Optional: the wrapper does all of this itself on its first start, from
-game.apk alone (source/dcr_setup.c). It needs, from the Android version you
+game.apk alone (the runtime's dcr_setup.c and source/pvz_setup_plan.c). It needs, from the Android version you
 own (com.trans.pvztv 1.1.5, armeabi-v7a):
 
     <root>/game.apk            the APK itself: the engine reads its data out of the zip

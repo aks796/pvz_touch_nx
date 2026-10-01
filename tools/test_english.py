@@ -64,6 +64,8 @@ TAKE_EN = {'reanim/finalwave.png', 'reanim/zombieswon.png', 'reanim/mainmenu3/pv
            'images/pvz_logo.png', 'reanim/mainmenu3/survival button.png',
            'reanim/mainmenu3/survival pressed.png', 'reanim/mainmenu3/survival selected.png',
            'images/survival_button.png', 'reanim/mainmenu3/almanac plant 10.png', 'images/guide.png'}
+# pvz_english.c's k_keep_game: never taken (the bubble with the Xbox prompt painted in)
+KEEP_GAME = {'images/store_speechbubble2.png'}
 CJK = re.compile(r'[　-鿿＀-￯]')
 CONV = re.compile(r'%(?!%)[-+ #0]*[\d*]*(?:\.[\d*]+)?([hlLqjzt]*[diouxXeEfFgGaAcspn])')
 FAILS = []
@@ -176,6 +178,9 @@ def main():
                 continue
             en = ei[rel]
             if crc(e, en) == crc(c, cn):
+                continue
+            if rel in KEEP_GAME:
+                check(rel not in low, 'taken, though the game\'s is kept: ' + rel)
                 continue
             if crc(g, gi[rel]) == crc(c, cn) or rel in TAKE_EN:
                 want[rel] = en

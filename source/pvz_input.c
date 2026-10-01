@@ -52,6 +52,7 @@
 #include "dcr_time.h"
 #include "jni.h"
 #include "pvz.h"
+#include "rt_pad.h"
 #include "util.h"
 
 void dcr_window_size(int *w, int *h);
@@ -128,7 +129,7 @@ static void log_controller(int p) {
 void pvz_input_init(void) {
   /* players 1-2 and handheld, any standard controller (the supported-id list
    * needs this project's libnx32: the image's sent it garbled) */
-  padConfigureInput(NPLAYERS, HidNpadStyleSet_NpadStandard);
+  rt_pad_setup(NPLAYERS, 1); /* players 1-2 and handheld, the list sent as 32-bit IDs (rt_pad.c) */
   debugPrintf("[input] controllers accepted: players 1-2 and handheld (Pro Controller, Joy-Cons)\n");
   padInitialize(&g_pad[0], HidNpadIdType_No1, HidNpadIdType_Handheld);
   padInitialize(&g_pad[1], HidNpadIdType_No2);

@@ -25,6 +25,7 @@
 #include "dcr_manifest.h"
 #include "jni.h"
 #include "pvz.h"
+#include "rt_settings.h"
 #include "so_util.h"
 #include "util.h"
 
@@ -202,7 +203,7 @@ H(h_startVibration) {
 }
 H(h_replayPicker) {
   debugPrintf("[java] %s: replay files are in %s/data/files/replays on the SD card\n", m->name,
-              PVZ_ROOT_PATH);
+              PORT_ROOT_PATH);
   return jv_none();
 }
 
@@ -453,7 +454,6 @@ const char *const jni_missing_classes[] = {
 /* ================================================================ setup */
 void pvz_java_init(void) {
   jni_init();
-  g_jni_log = dcr_config()->log_jni;
   g_activity = jni_singleton(EA);
   g_view = jni_singleton(NV);
   g_audio_output = jni_singleton(AO);

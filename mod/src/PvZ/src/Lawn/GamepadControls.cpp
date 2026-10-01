@@ -1044,7 +1044,10 @@ void GamepadControls::UpdatePreviewReanim() {
 void GamepadControls::UpdateStates(float dt) {
     BaseGamepadControls::UpdateStates(dt);
 
-    if (mGamepadState == MOVEMENT_STATE_PLANT_CURSOR || mGamepadState == MOVEMENT_STATE_SELECT_SEED || mGamepadState == MOVEMENT_STATE_DIG_HOLD) {
+    // Switch port: not in MOVEMENT_STATE_DIG_HOLD. Digging needs no seed, and the shovel
+    // tutorial's seed bank is empty: holding B was cancelled on the first frame, so the
+    // controller could never dig (tester, 2026-09-30).
+    if (mGamepadState == MOVEMENT_STATE_PLANT_CURSOR || mGamepadState == MOVEMENT_STATE_SELECT_SEED) {
         SeedBank *seedBank = GetSeedBank();
         if (!HasValidSelectedSeed(this, seedBank)) {
             LOG_WARN("[NETPLAY] cancel seed state={} with invalid selected index={} packetCount={}", int(mGamepadState), mSelectedSeedIndex, seedBank ? seedBank->mNumPackets : -1);

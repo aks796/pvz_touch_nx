@@ -32,27 +32,27 @@
 #include <switch.h>
 
 #include "config.h"
+#include "dcr_apkcache.h"
+#include "dcr_boost.h"
 #include "dcr_config.h"
+#include "dcr_dircache.h"
 #include "dcr_path.h"
-#include "dcr_time.h"
 #include "error.h"
+#include "exc_handler.h"
 #include "gl_layer.h"
 #include "jni.h"
 #include "pvz.h"
+#include "rt_applet.h"
 #include "so_util.h"
 #include "util.h"
+#include "watchdog.h"
 
 extern so_module g_mod_native, g_mod_game, g_mod_homura;
 
-void dcr_watchdog_start(void);
-void pvz_prof_start(void);      /* pvz_prof.c */
-void dcr_dircache_report(void); /* dcr_dircache.c */
-void dcr_boost_poll(void);
-void dcr_boost_report(void);
-void dcr_boost_launch_end(void);
-void dcr_apkcache_report(void);
-void pvz_looper_run_main(int timeout_ms); /* android_ndk.c */
-void pvz_config_locale(const char *lang, const char *country, int density);
+void pvz_prof_start(void);                /* pvz_prof.c */
+void pvz_setup_font_failed(const char *why); /* pvz_setup_plan.c */
+void dcr_looper_run_main(int timeout_ms); /* the runtime's android_ndk.c */
+void dcr_config_locale(const char *lang, const char *country, int density);
 
 #define A_LIB_GAME "/data/app/" PVZ_PACKAGE "-1/lib/arm/" PVZ_LIB_GAME
 #define A_FILES "/data/data/" PVZ_PACKAGE "/files"
@@ -75,7 +75,7 @@ typedef void (*fn_prefs)(void *env, void *clazz, void *con, jint feat, void *nam
                          jboolean b, void *str);
 
 static jlong g_handle;
-static volatile int g_exit, g_focused = 1, g_focus_changed, g_started;
+static volatile int g_exit;
 static fn_h n_processWorks;
 
 int64_t pvz_native_handle(void) { return g_handle; }
@@ -112,10 +112,6 @@ void pvz_native_processWorks(void) {
 
 void pvz_request_exit(void) { g_exit = 1; }
 
-const char *dcr_addr_name(uint32_t a, char *buf, size_t cap); /* exc_handler.c */
-void dcr_setup_font_failed(const char *why);                    /* dcr_setup.c */
-int dcr_is_code_addr(uint32_t a);                               /* exc_handler.c */
-size_t dcr_readable(uint32_t p, size_t want);                   /* exc_handler.c */
 
 /* Why the engine is closing (called from Activity.finish): its close flags,
  * the resource manager's error, and the code addresses on this thread's
@@ -136,7 +132,7 @@ void pvz_log_quit_state(void) {
       if (rm[0x12c] && err && dcr_readable((uint32_t)(uintptr_t)err, 1)) {
         debugPrintf("[quit] resource manager error: %.400s\n", err);
         if (strstr(err, "Failed to load font"))
-          dcr_setup_font_failed(err); /* the next start: the fonts without the button pictures */
+          pvz_setup_font_failed(err); /* the next start: the fonts without the button pictures */
       }
       else
         debugPrintf("[quit] resource manager: no error\n");
@@ -169,9 +165,9 @@ int pvz_game_ready(void) {
   return lawn_app && *lawn_app;
 }
 
-/* For the watchdog: frames presented, and whether a stop is expected. */
+/* For the watchdog: frames presented. Whether a stop is expected (focus,
+ * the keyboard up) is the runtime's (rt_applet.c). */
 uint64_t dcr_boot_frames(void) { return dcr_gl_frames(); }
-int dcr_boot_in_focus(void) { return g_focused && g_started; }
 
 /* ---------------------------------------------------- the mod's settings */
 static void apply_homura_settings(void) {
@@ -242,51 +238,25 @@ void pvz_mod_feature(int num, int value, int on) {
 }
 
 /* ------------------------------------------------------------- lifecycle */
-static AppletHookCookie g_hook;
-
-static void on_applet(AppletHookType type, void *param) {
-  static const char *const names[] = {"focus state", "operation mode", "performance mode",
-                                      "EXIT REQUEST", "resume", "capture button",
-                                      "screenshot taken", "request to display"};
-  if (type == AppletHookType_OnExitRequest)
-    debugPrintf("[applet] the system asked the game to close (HOME menu > Close Software, "
-                "power off/restart, or another program launched)\n");
-  else if ((unsigned)type < sizeof names / sizeof names[0])
-    debugPrintf("[applet] %s (focus %d, mode %d)\n", names[type], (int)appletGetFocusState(),
-                (int)appletGetOperationMode());
-  if (type == AppletHookType_OnFocusState || type == AppletHookType_OnOperationMode) {
-    int focused = appletGetFocusState() == AppletFocusState_InFocus;
-    if (focused != g_focused) {
-      g_focused = focused;
-      g_focus_changed = 1;
-    }
-  }
-}
-
 static void window_focus(int on) {
   fn_hz f = (fn_hz)pvz_native(NV_ "onWindowFocusChangedNative");
   if (f)
     f(g_jni_env, g_view, g_handle, (jboolean)on);
 }
 
-static void apply_focus(void) {
-  if (!g_focus_changed || !g_started)
-    return;
-  g_focus_changed = 0;
-  if (!g_focused) {
-    debugPrintf("[boot] focus lost: onPause\n");
-    window_focus(0);
-    call_h(NA_ "onPauseNative");
-    pvz_audio_pause(1);
-    log_flush_ring();
-    dcr_time_suspend();
-  } else {
-    dcr_time_resume();
-    pvz_audio_pause(0);
-    call_h(NA_ "onResumeNative");
-    window_focus(1);
-    debugPrintf("[boot] focus regained: onResume\n");
-  }
+/* The runtime (rt_applet.c) takes the HOME menu and sleep messages, writes
+ * out the log and holds the clocks; the activity is paused and resumed here.
+ * Both run from rt_applet_poll() in the frame loop below, on this thread. */
+void port_focus_lost(void) {
+  window_focus(0);
+  call_h(NA_ "onPauseNative");
+  pvz_audio_pause(1);
+}
+
+void port_focus_gained(void) {
+  pvz_audio_pause(0);
+  call_h(NA_ "onResumeNative");
+  window_focus(1);
 }
 
 /* A backstop for the shutdown: if the game has not closed in 5 s (an engine
@@ -360,9 +330,10 @@ static void present(void) {
 
 int pvz_boot_run(void) {
   pvz_java_init();
-  pvz_config_locale(dcr_config()->english ? "en" : "zh", dcr_config()->english ? "US" : "CN",
+  dcr_config_locale(dcr_config()->english ? "en" : "zh", dcr_config()->english ? "US" : "CN",
                     dcr_config()->res_h >= 1080 ? 320 : 213);
   dcr_watchdog_start();
+  rt_watchdog_add_counter("audio writes", pvz_audio_writes);
   pvz_input_init();
   dcr_frame_hook = pvz_ui_frame;        /* pvz_ui.c */
   dcr_present_hook = present;           /* the intro video, the pointer */
@@ -398,12 +369,12 @@ int pvz_boot_run(void) {
     apply_homura_settings();
 
   /* ---- onStart, onResume, the surface, focus ---- */
-  appletHook(&g_hook, on_applet, NULL);
+  /* The focus messages (HOME, sleep) are the runtime's from boot on
+   * (rt_applet.c); they reach the activity from the frame loop. */
   call_h(NA_ "onStartNative");
   call_h(NA_ "onResumeNative");
   surface_up();
   window_focus(1);
-  g_started = 1;
   debugPrintf("[boot] activity up; this thread is the UI thread now\n");
   log_flush_ring();
 
@@ -412,13 +383,13 @@ int pvz_boot_run(void) {
   int launch_done = 0;
   unsigned long quiet_at = 0;
   const u64 input_period = armNsToTicks(8000000ull); /* 8 ms: twice per display frame */
-  while (!g_exit && appletMainLoop()) {
-    apply_focus();
-    if (!g_focused) {
-      pvz_looper_run_main(50);
+  while (!g_exit && !rt_exit_requested() && appletMainLoop()) {
+    rt_applet_poll();
+    if (!rt_focused()) {
+      dcr_looper_run_main(50);
       continue;
     }
-    pvz_looper_run_main(4);
+    dcr_looper_run_main(4);
     u64 now = armGetSystemTick();
     if (now - last_input >= input_period) {
       last_input = now;
@@ -456,14 +427,14 @@ int pvz_boot_run(void) {
    * pause. Only then may exit() take fs, audout and nv away. */
   debugPrintf("[boot] leaving: onPause, onStop, surfaceDestroyed, unloadNativeApp\n");
   log_set_quiet(0);
-  appletUnhook(&g_hook);
-  if (g_focused) {
+  /* the hook off, no more hang reports, and the clocks running again if the
+   * game was last told it lost focus (frozen clocks would stall any timed
+   * wait in the shutdown) */
+  rt_applet_stop();
+  if (rt_focused()) {
     window_focus(0);
     call_h(NA_ "onPauseNative");
-  } else {
-    dcr_time_resume(); /* frozen clocks would stall any timed wait in the shutdown */
   }
-  g_started = 0;
   call_h(NA_ "onStopNative");
   pvz_audio_close();
   fn_h destroyed = (fn_h)pvz_native(NV_ "onSurfaceDestroyedNative");

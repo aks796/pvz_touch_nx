@@ -104,11 +104,11 @@ layouts (NvMap and others) that Mesa and libdrm_nouveau rely on.
 takes the 64-bit mask in r2:r3, so r3 carries whatever the caller left there.
 The call fails with InvalidCoreId and the thread stays on the core it was
 created on. This port issues the SVC with inline assembly
-(`source/dcr_sched.c`).
+(`runtime/source/dcr_sched.c`).
 
 **`svcGetThreadCoreMask` unbalances the stack.** The stub pushes three words
 and restores two. This port issues it with inline assembly
-(`source/dcr_sched.c`).
+(`runtime/source/dcr_sched.c`).
 
 **`svcWaitForAddress` (0x34) has no 32-bit stub.** There are two register
 layouts:
@@ -119,7 +119,7 @@ layouts:
 
 On hardware (Atmosphère for firmware 21.x) and on Ryujinx 1.1.1098, timed waits
 were only correct with the int32 layout. This port picks the layout with a
-self-test at start-up (`source/bionic_pthread.c`, `dcr_pthread_selftest`). A
+self-test at start-up (`runtime/source/bionic_pthread.c`, `dcr_pthread_selftest`). A
 libnx32 stub should follow whatever layout the kernel it targets uses.
 
 **`armICacheInvalidate` is `(void)0` (`cache.h`).** A 32-bit EL0 thread has no
@@ -128,13 +128,13 @@ happens. Code written at run time (hooks, JIT) can then run stale cache lines.
 This port cleans the data cache with `svcFlushProcessDataCache`, then flips a
 dedicated AliasCode page R to RX with `svcSetProcessMemoryPermission`. The
 kernel invalidates every core's instruction cache when a code page gains or
-loses execute permission (`source/code_flush.c`). libnx32 could provide this as
+loses execute permission (`runtime/source/code_flush.c`). libnx32 could provide this as
 its `armICacheInvalidate`.
 
 **The exception handler is a TODO stub (`exception32.s`,
 `__libnx_exception_entry`).** Faults cannot be handled inside the process. This
-port overrides it: `source/exc32.S` runs the handler on its own 64 KB stack and
-saves r8-r12 and the VFP registers, and `source/exc_handler.c` writes
+port overrides it: `runtime/source/exc32.S` runs the handler on its own 64 KB stack and
+saves r8-r12 and the VFP registers, and `runtime/source/exc_handler.c` writes
 `crash.log` with module+offset addresses and a stack scan.
 
 **`kernel/virtmem.c` has two 32-bit bugs.**
@@ -148,7 +148,7 @@ saves r8-r12 and the VFP registers, and `source/exc_handler.c` writes
    region, [0x200000, 0x40000000).
 
 This showed as `MapSharedMemory` failing with InvalidCurrentMemory during
-`hidInitialize`. `source/nx32_virtmem.c` is a fixed copy of the file: u64
+`hidInitialize`. `runtime/source/nx32_virtmem.c` is a fixed copy of the file: u64
 region bounds, and it searches the code region.
 
 **`__nx_dynamic` (crt0) cannot apply text relocations.** devkitARM's prebuilt
@@ -158,7 +158,7 @@ target libraries (newlib libc/libm, libsysbase, libstdc++) are not built with
 turns it into CodeData on Mesosphère, which can never be executable again (a
 boot died with svcBreak 0xDC03).
 
-`source/crt0_reloc.c` replaces `__nx_dynamic` (with `dcr32.specs`,
+`runtime/source/crt0_reloc.c` replaces `__nx_dynamic` (with `dcr32.specs`,
 `dcr32.ld` and `-z notext`):
 
 1. It gets a real handle to its own process by sending the pseudo-handle over
@@ -174,18 +174,18 @@ this.
 **`audout` buffer descriptors.** The audout IPC buffer descriptor has 64-bit
 fields for every client, while libnx32's `AudioOutBuffer` has 32-bit pointers.
 This port sends append and get-released with the right layout
-(`source/pvz_audio.c`, `AoBuf`). libnx32's audout wrapper needs the 64-bit
+(`runtime/source/rt_audout.c`). libnx32's audout wrapper needs the 64-bit
 layout.
 
 **The default window keeps a static `ViDisplay`.** A second
 `viOpenDisplay("Default")` fails with AlreadyOpened (0x1272), so the vsync event
-could not be fetched separately. `source/nx_init.c` defines
+could not be fetched separately. `runtime/source/nx_init.c` defines
 `nwindowGetDefault`, `__nx_win_init` and `__nx_win_exit` itself and shares the
 display.
 
 **`exit()` shuts services down while other threads still run.** A game thread
 that calls hid after `hidExit` aborts the process (0x1159). This port logs and
-ends the process with `svcExitProcess` (`source/bionic_core.c`, `b_exit`). A
+ends the process with `svcExitProcess` (`runtime/source/bionic_core.c`, `b_exit`). A
 32-bit runtime for foreign code needs an exit path that does not tear down
 services under running threads.
 
@@ -196,17 +196,17 @@ services under running threads.
 - Threads created with `threadCreate(..., -2)`, and the main thread, get an
   affinity of their ideal core only.
 
-`source/dcr_sched.c` moves the game's threads to priority 59 on cores 0-2.
+`runtime/source/dcr_sched.c` moves the game's threads to priority 59 on cores 0-2.
 
 ### devkitARM newlib (the vita2hos toolchain)
 
 - **libm is a soft-float build.** Every double operation in it is a library
-  call. `source/bionic_math.c` implements the hot functions with VFP
+  call. `runtime/source/bionic_math.c` implements the hot functions with VFP
   instructions and passes the transcendental ones through.
 - **`timespec_get` is declared but not implemented.** Mesa's `c11/threads.h`
-  needs it (`source/host_compat.c`).
+  needs it (`runtime/source/host_compat.c`).
 - **`stat()` opens the file to read its size.** On a file the process holds
-  open for writing, this fails with FS result 0xe02. `source/bionic_io.c` sizes
+  open for writing, this fails with FS result 0xe02. `runtime/source/bionic_io.c` sizes
   such files through the open handle.
 - **`access()` is unreliable over fsdev.** This port uses `stat()` instead.
 - **libnx's fsdev maps most FS results to EIO.** `fsdevGetLastResult` gives the
@@ -220,7 +220,7 @@ Adler-32 trailer, into its 32 KB window while output is still owed. libpng
 "Not enough image data". 244 of the game's 301 PNGs failed in a host
 replica.
 
-`source/bionic_zlib.c` hands one consumed byte back when the output is full
+`runtime/source/bionic_zlib.c` hands one consumed byte back when the output is full
 and the input is empty, and takes it again on the next call. A real zlib for
 the 32-bit toolchain, or this fix in miniz, is needed by any program that uses
 libpng on it.
@@ -246,7 +246,7 @@ The fix is `uint32_t` at the three call sites (`st_format.c`, `glformats.c`,
 enums"). Do not widen the enum itself: that changes bitfield layouts elsewhere.
 
 **EGL.** Mesa's Switch EGL platform offers RGBA8888 window configs without
-MSAA, and it rejects Android-only attributes. `source/gl_mesa.c` filters those
+MSAA, and it rejects Android-only attributes. `runtime/source/gl_mesa.c` filters those
 attributes and retries without MSAA.
 
 ### FFmpeg 7.1.1 (ffmpeg32)
@@ -269,7 +269,7 @@ headers must be built the same way; this port's Makefile does so for
   This port ships a 64-bit launcher NRO that carries the 32-bit ExeFS NSP. When
   it is started from a sphaira forwarder, it installs the NSP as
   `atmosphere/contents/<title id>/exefs.nsp`, with `main.npdm` retargeted to
-  that title (`source/dcr_exefs.h`), and restarts the title. An hbl override
+  that title (`runtime/source/dcr_exefs.h`), and restarts the title. An hbl override
   instead needs `override_any_app_address_space=32_bit`.
 
 ---
@@ -307,7 +307,7 @@ environment is set, as Android's loader does.
 **kuser helpers.** libgcc's `__sync_*` routines in libnative_code and
 libGameMain call the Linux kuser helpers (0xffff0fc0 and neighbours) through
 literal pools: 43 cmpxchg and 5 barrier literals in each module. The loader
-rewrites those literals to point at `source/kuser.S`.
+rewrites those literals to point at `runtime/source/kuser.S`.
 
 **Licence check.** The engine's one-time activation server no longer exists,
 and a failed activation shuts the engine down after loading. The engine
@@ -356,6 +356,15 @@ block while three buffers are queued, which paces the mixer as
 - The port always lists two controllers. Game code that needs to know whether
   a second controller is really held checks `Gamepad` status +0x19c: 1 means
   present but never used, 3 means active, 2 means idle for 20 s.
+- Text entry (`pvz_text.c`). The new player's name and the cheat code are
+  `EditWidget`s on the soft-keyboard path: `showIme`, then
+  `onTextChangedNative` with the text. On Android the keyboard's Done then
+  sends Enter, and Return in an `EditWidget` calls its listener's
+  `EditWidgetText` (`NewUserDialog` takes that as its OK). The Switch
+  keyboard's OK does both: the text, and three frames later a Return in the
+  field, from the engine thread (`AndroidAppDriver::InjectKeyEvent`, in
+  `pvz_ui.c`). The engine does the same with a dialog's answer
+  (`AndroidAppDriver::HandleInputEvents`: clear, type, Return).
 
 **Networking.** Real libnx BSD sockets serve libHomura's imports only
 (`pvz_net.c`), translated from Linux values. Network interfaces come from nifm
@@ -370,6 +379,10 @@ r27d (`mod/build_mod.sh`).
 - The rebuilt library is embedded in the NSP and installed in the game folder.
 - It replaces the APK's copy only when the APK carries a known official
   build, checked by CRC.
+- Upstream's netplay guard in `GamepadControls::UpdateStates` cancelled every
+  seed state without a valid selected packet, the dig hold included: with an
+  empty seed bank (the shovel tutorial) holding B was undone at once. The
+  guard now covers only the planting states.
 
 **English.** 1.1.5 exists only in Chinese. The English builds of the older mod
 carry `assets/paks/2.ChangeGameChina.zip`, the Chinese original of every file
@@ -384,18 +397,33 @@ files directory, which the engine searches before the APK:
 Fonts need a UTF-8 BOM, and the engine's compiled font cache must be cleared
 whenever a font changes.
 
-The layer reads only 148 of the English APK's 2,020 entries.
+A picture the English build painted an Xbox 360 prompt into keeps the game's
+(`k_keep_game`): Crazy Dave's speech bubble (`Store_SpeechBubble2.png`) says
+"PRESS (A) TO CONTINUE", and the engine writes `[CLICK_TO_CONTINUE]` there
+itself, so the prompt came out twice in two fonts.
+
+The layer reads only 147 of the English APK's 2,020 entries.
 `tools/make_english_pack.py` records which ones by running the layer on the
 host (the host zip reader logs what it extracts, `MINIZ_TRACE`), writes them
 to a 21 MB zip, and checks that the layer made from it is byte-identical. The
 launcher NRO carries that pack as `romfs:/english.apk`. On the first start
 with no English APK in the folder, the game program copies it out as
-`PvZ Touch English.apk` (`dcr_setup_english_from_nro`), and from then on it is
-an English APK like any other.
+`PvZ Touch English.apk` (`port_after_apk_find` in `source/pvz_main.c`), and
+from then on it is an English APK like any other.
 
 **APKs under any name.** Both the game and the English source are
-`com.trans.pvztv` with the same engine. `pvz_apks.c` tells them apart by
-content: the English builds carry the translation pak and the game does not.
+`com.trans.pvztv` with the same engine. The runtime's APK finder tells them
+apart by content (`PORT_APK_ROLES` in `source/port_config.h`): the English
+builds carry the translation pak and the game does not.
+
+**The android32 runtime.** The loader, bionic, JNI core, NDK, GL glue,
+clocks, paths, setup, config engine, crash handler, watchdog, `main()` and
+the launcher are the shared runtime every 32-bit port builds on
+(`runtime/`: a symlink to `libraries/android32` while developing, a git
+submodule on GitHub). This port keeps its game's code: `port_config.h`
+(the runtime's settings), `pvz_main.c` (`port_load`/`port_run`),
+`pvz_setup_plan.c` (the setup plan and its steps), `dcr_config.c` (the
+config.ini table), and the `pvz_*.c` files.
 
 **Memory and threads.**
 
@@ -404,6 +432,16 @@ content: the English builds carry the translation pak and the game does not.
 - Game threads are libnx threads at priority 59 on cores 0-2.
 - Condition variables use `svcWaitForAddress` counters, with 250 ms slices as
   a backstop against missed wakeups.
+
+**HOME and sleep.** libnx's default focus mode (`SuspendHomeSleep`) freezes
+the process for the HOME menu and sleep and sends no focus messages, so the
+game never got onPause/onResume. `pvz_boot.c` sets `SuspendHomeSleepNotify`:
+still frozen, but the messages arrive afterwards. The engine's frame clock
+(`Sexy::GetTickCount`) is `CLOCK_MONOTONIC`, and the system tick keeps running
+through a freeze. So `bionic_time.c` removes any gap over 2 s between two
+readings from the monotonic clocks (a watch thread reads every 100 ms, so only
+a freeze leaves one), and the hang watchdog uses that clock too. Wall time
+stays real (the Zen Garden, save times). Found by the Asphalt 8 Retry port.
 
 **Exit.** Android's shutdown order:
 
@@ -433,7 +471,7 @@ Hardware is the real test.
   - `struct statvfs` is 44 bytes on 32-bit bionic;
   - errno numbers are Linux ones;
   - `fnmatch` flags use BSD values.
-- **Inventory the imports first.** `tools/gen_imports.py` lists every import of
+- **Inventory the imports first.** `runtime/tools/gen_imports.py` lists every import of
   the modules and generates the binding table. Log every JNI method with no
   handler rather than failing.
 - **Look for code that assumes Linux:**

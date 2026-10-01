@@ -66,6 +66,9 @@ Two controllers play the 2-player modes. Cheats and the mod menu are in
 
 ### Requirements
 
+* [android32](https://github.com/aks796/android32), the runtime this port is
+  built on, at `runtime/` (a git submodule: clone with
+  `--recurse-submodules`, or run `git submodule update --init`)
 * Docker
 * The vita2hos AArch32 toolchain image, `ghcr.io/vita2hos/devcontainer/vita2hos`
 * [libnx32](https://github.com/aks796/libnx32) 4.12.0 or newer, the 32-bit libnx.
