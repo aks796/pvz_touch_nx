@@ -19,24 +19,6 @@ Android TV port of the console version.
 
 ## About
 
-This is the console edition of Plants vs. Zombies, the one PopCap made for
-Xbox 360 and PlayStation 3, with its two-player modes, its controller layout
-and its pause menu. It comes by way of Transmension's Android TV edition, which
-is that console version on Android with a harder Adventure mode, and the
-**Touch** mod by ZombieYetis.
-
-On the Switch that means:
-
-* **Two players on one console.** The Xbox 360 version's Co-op and Versus
-  modes. The TV edition dropped both in an update; the Touch mod brings them
-  back, and Versus also works online against Android players.
-* **The Xbox 360 controls**: a cursor, seed packets on L and R, hold B to dig,
-  and every sun and coin flying to the cursor with ZL or ZR.
-* **The Xbox 360 pause menu**, and the Xbox version's music as an option
-  (`xbox_music` in `config.ini`).
-* The mod's additions on top: fast forward, a mod menu with cheats, and the
-  Zombatar editor.
-
 `pvz_touch_nx` is a native wrapper that runs the 32-bit ARM (armeabi-v7a)
 Android build of **Plants vs. Zombies TV Touch** on Nintendo Switch. It loads
 the game's own engine libraries and recreates the Android, JNI, audio, input,
@@ -52,6 +34,25 @@ carries the English pictures, fonts and text of **PvZTouch 4.0.5**, the
 English build of the older mod, and lays them over the game.
 
 No game code is included. You need your own copy of the APK.
+
+---
+
+## Info
+
+This is the console edition of Plants vs. Zombies, the one PopCap made for
+Xbox 360 and PlayStation 3. Transmension's Android TV edition is that console
+version on Android, with a harder Adventure mode, and the **Touch** mod by
+ZombieYetis builds on it.
+
+* **Two players on one console.** The Xbox 360 version's Co-op and Versus
+  modes. The TV edition dropped both in an update; the Touch mod brings them
+  back, and Versus also works online against Android players.
+* **The Xbox 360 controls**: a cursor, seed packets on L and R, hold B to dig,
+  and every sun and coin flying to the cursor with ZL or ZR.
+* **The Xbox 360 pause menu**, and the Xbox version's music as an option
+  (`xbox_music` in `config.ini`).
+* The mod's additions on top: fast forward, a mod menu with cheats, and the
+  Zombatar editor.
 
 ---
 
