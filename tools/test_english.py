@@ -49,9 +49,12 @@ int main(int argc, char **argv) {   /* apply|remove <game.apk> <english.apk> <ou
   size_t il, hl, hsl;
   unsigned char *ic = slurpn(argv[5], "../buttons/icons.png", &il), *hb = slurpn(argv[5], "../buttons/help_buttons.png", &hl),
                 *hs = slurpn(argv[5], "../buttons/help_buttons_small.png", &hsl);
+  size_t p0l, p1l;
+  unsigned char *p0 = slurpn(argv[5], "../controllers/gamepad0.png", &p0l), *p1 = slurpn(argv[5], "../controllers/gamepad1.png", &p1l);
   PvzEnglishCfg c = {files, list, argv[3], {files, ext},
                      {slurp(argv[5], "AddonStrings_en.txt"), slurp(argv[5], "LawnStrings_en.txt"),
-                      slurp(argv[5], "LawnStrings_fix.txt"), ic, hb, hs, il, hl, hsl}, lg, NULL, NULL, 0};
+                      slurp(argv[5], "LawnStrings_fix.txt"), ic, hb, hs, il, hl, hsl, {p0, p1}, {p0l, p1l}},
+                     lg, NULL, NULL, 0};
   if (!strcmp(argv[1], "remove")) { pvz_english_remove(&c); return 0; }
   mz_zip_archive z; memset(&z, 0, sizeof z);
   if (!mz_zip_reader_init_file(&z, argv[2], 0)) return 4;
@@ -268,6 +271,51 @@ def main():
             fonts += 1
         print('OK: %d English fonts, each naming only its own _en pictures, each with the button layer' % fonts)
 
+        # --- the help bar's sheets: the game's own (the Xbox 360 edition's), relabelled for the Switch in
+        # cels 4 5 6 8 9 10 (+ R L ZR ZL -), the other cels the game's pixel for pixel
+        import numpy as np
+        for rel, cel in (('images/help_buttons.png', 42), ('images/help_buttons_small.png', 21)):
+            mine = os.path.join(files, rel)
+            check(os.path.exists(mine), 'no ' + rel)
+            if not os.path.exists(mine):
+                continue
+            a = np.array(Image.open(mine).convert('RGBA')).astype(int)
+            o = np.array(Image.open(io.BytesIO(g.read('assets/files/' + rel))).convert('RGBA')).astype(int)
+            check(a.shape == o.shape, rel + ': not the game\'s size')
+            if a.shape != o.shape:
+                continue
+            changed = [i for i in range(13) if (a[:, i * cel:(i + 1) * cel] != o[:, i * cel:(i + 1) * cel]).any()]
+            check(changed == [4, 5, 6, 8, 9, 10], '%s: cels changed %s' % (rel, changed))
+        print('OK: help bar sheets: the game\'s own, with + R L ZR ZL - (the other cels untouched)')
+
+        # --- the versus screens' controllers: the side picker's the port's Pro Controllers; the held ones
+        # the game's own recoloured: its size and transparency, only the controller changed (not the
+        # zombie's teeth on its edge), its white plastic gone dark
+        for i in range(2):
+            rel = 'images/gamepad%d.png' % i
+            mine = os.path.join(files, rel)
+            check(os.path.exists(mine) and open(mine, 'rb').read() ==
+                  open(os.path.join(RES, '..', 'controllers', 'gamepad%d.png' % i), 'rb').read(), rel + ': not the port\'s')
+        for rel, keep in (('images/plant_side_selected.png', None), ('images/zombie_side_selected.png', None),
+                          ('images/help_menu_image_vs_controllers.png', (80, 78, 100, 87))):
+            mine = os.path.join(files, rel)
+            check(os.path.exists(mine), 'no ' + rel)
+            if not os.path.exists(mine):
+                continue
+            a = np.array(Image.open(mine).convert('RGBA')).astype(int)
+            o = np.array(Image.open(io.BytesIO(g.read('assets/files/' + rel))).convert('RGBA')).astype(int)
+            check(a.shape == o.shape and (a[..., 3] == o[..., 3]).all(), rel + ': not the game\'s size and transparency')
+            if a.shape != o.shape:
+                continue
+            ch = (a[..., :3] != o[..., :3]).any(2)
+            white = (o[..., 3] > 0) & (o[..., :3].min(2) > 200) & (o[..., :3].max(2) - o[..., :3].min(2) < 12) & ch
+            check(ch.sum() > 1500, '%s: only %d pixels changed' % (rel, ch.sum()))
+            check(white.sum() > 100 and a[..., :3][white].mean() < 110, '%s: the white plastic is not dark' % rel)
+            if keep:
+                x0, y0, x1, y1 = keep
+                check(not ch[y0:y1, x0:x1].any(), rel + ': the teeth changed')
+        print('OK: versus controllers: the side picker\'s the Pro Controller, the held ones recoloured')
+
         # --- text
         gz = parse(g.read('assets/files/properties/LawnStrings.txt').decode('utf-8'))
         ls = parse(open(os.path.join(files, 'properties/LawnStrings.txt'), encoding='utf-8').read())
@@ -332,8 +380,13 @@ def main():
         run('remove', game, eng)
         rc, log = run('apply', game, os.path.join(t, 'nope.apk'))
         made2 = [m for m in open(os.path.join(out, '.english')).read().split('\n')[1:] if m]
+        # (the help bar's sheets and the versus controllers too, whatever the text does)
         check(rc == 0 and sorted(made2) == sorted(['properties/LawnStrings.txt', 'properties/LawnOEMStrings.txt',
-                                                   'addonFiles/properties/AddonStrings.txt', 'menu/HelpMenu.menu.txt']),
+                                                   'addonFiles/properties/AddonStrings.txt', 'menu/HelpMenu.menu.txt',
+                                                   'images/help_buttons.png', 'images/help_buttons_small.png',
+                                                   'images/gamepad0.png', 'images/gamepad1.png',
+                                                   'images/plant_side_selected.png', 'images/zombie_side_selected.png',
+                                                   'images/help_menu_image_vs_controllers.png']),
               'text-only layer: %s' % made2)
         left = [os.path.relpath(os.path.join(dp, f), files) for dp, _, fs in os.walk(files) for f in fs]
         check(sorted(left) == sorted(made2), 'text-only left other files: %s' % sorted(set(left) - set(made2))[:5])

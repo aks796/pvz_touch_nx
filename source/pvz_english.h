@@ -14,6 +14,10 @@ typedef struct {
    * every one in a row, and the help bar's two sheets */
   const unsigned char *icons_png, *help_png, *help_small_png;
   size_t icons_len, help_len, help_small_len;
+  /* the versus side picker's controllers, players 1 and 2: the Switch Pro
+   * Controller (resources/controllers/, tools/make_controller_icons.py) */
+  const unsigned char *pad_png[2];
+  size_t pad_len[2];
 } PvzEnglishRes;
 
 typedef struct {

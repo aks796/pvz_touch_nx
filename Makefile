@@ -33,7 +33,7 @@ $(BUILD)/pvz_video.o: $(SOURCES)/pvz_video.c $(RENDERER_STAMP) | $(BUILD)
 # The port's English lines, pictures and the mod, assembled in with .incbin
 # (not seen by -MMD).
 $(BUILD)/pvz_res.o: $(wildcard resources/english/*.txt) $(wildcard resources/logo/*.png) \
-  $(wildcard resources/buttons/*.png) mod/out/libHomura.so
+  $(wildcard resources/buttons/*.png) $(wildcard resources/controllers/gamepad*.png) mod/out/libHomura.so
 
 .PHONY: check
 check:

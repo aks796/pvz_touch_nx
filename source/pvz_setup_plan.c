@@ -96,6 +96,8 @@ int port_setup_lib_override(const char *lib, unsigned long apk_crc, RtSetupCtx *
 extern const char pvz_res_addon_en[], pvz_res_lawn_en[], pvz_res_lawn_fix[]; /* pvz_res.S */
 extern const unsigned char pvz_res_button_icons[], pvz_res_help_buttons[], pvz_res_help_buttons_small[];
 extern const uint32_t pvz_res_button_icons_size, pvz_res_help_buttons_size, pvz_res_help_buttons_small_size;
+extern const unsigned char pvz_res_gamepad0[], pvz_res_gamepad1[];
+extern const uint32_t pvz_res_gamepad0_size, pvz_res_gamepad1_size;
 
 static void setup_log(const char *fmt, ...) {
   char buf[1024];
@@ -160,9 +162,17 @@ static void step_english(RtSetupCtx *ctx) {
       .layer_list = list,
       .english_apk = eng,
       .app_dirs = {files, ext},
-      .res = {pvz_res_addon_en, pvz_res_lawn_en, pvz_res_lawn_fix, pvz_res_button_icons,
-              pvz_res_help_buttons, pvz_res_help_buttons_small, pvz_res_button_icons_size,
-              pvz_res_help_buttons_size, pvz_res_help_buttons_small_size},
+      .res = {.addon_en = pvz_res_addon_en,
+              .lawn_en = pvz_res_lawn_en,
+              .lawn_fix = pvz_res_lawn_fix,
+              .icons_png = pvz_res_button_icons,
+              .help_png = pvz_res_help_buttons,
+              .help_small_png = pvz_res_help_buttons_small,
+              .icons_len = pvz_res_button_icons_size,
+              .help_len = pvz_res_help_buttons_size,
+              .help_small_len = pvz_res_help_buttons_small_size,
+              .pad_png = {pvz_res_gamepad0, pvz_res_gamepad1},
+              .pad_len = {pvz_res_gamepad0_size, pvz_res_gamepad1_size}},
       .log = setup_log,
       .working = english_working,
       .progress = english_progress,

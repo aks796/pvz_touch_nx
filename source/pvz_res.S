@@ -88,3 +88,26 @@ pvz_res_help_buttons_small_end:
 	.global pvz_res_help_buttons_small_size
 pvz_res_help_buttons_small_size:
 	.word pvz_res_help_buttons_small_end - pvz_res_help_buttons_small
+
+/* The versus side picker's controllers, players 1 and 2: the Switch Pro
+ * Controller (tools/make_controller_icons.py; pvz_english.c puts them in the
+ * layer with the held ones recoloured). */
+	.balign 4
+	.global pvz_res_gamepad0
+pvz_res_gamepad0:
+	.incbin "resources/controllers/gamepad0.png"
+pvz_res_gamepad0_end:
+	.balign 4
+	.global pvz_res_gamepad0_size
+pvz_res_gamepad0_size:
+	.word pvz_res_gamepad0_end - pvz_res_gamepad0
+
+	.balign 4
+	.global pvz_res_gamepad1
+pvz_res_gamepad1:
+	.incbin "resources/controllers/gamepad1.png"
+pvz_res_gamepad1_end:
+	.balign 4
+	.global pvz_res_gamepad1_size
+pvz_res_gamepad1_size:
+	.word pvz_res_gamepad1_end - pvz_res_gamepad1

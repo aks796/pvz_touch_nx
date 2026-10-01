@@ -402,6 +402,36 @@ A picture the English build painted an Xbox 360 prompt into keeps the game's
 "PRESS (A) TO CONTINUE", and the engine writes `[CLICK_TO_CONTINUE]` there
 itself, so the prompt came out twice in two fonts.
 
+**The console's art.** The game APK carries the Xbox 360 edition's button
+pictures, `images/help_buttons.png` and `help_buttons_small.png` (13 cels: A
+B X Y Start RB LB D-pad RT LT Back RS LS). The layer shows those in the help
+bar and in the text (each font's button layer), relabelled for the Switch
+(`x360_buttons`). The bumpers say R and L, the triggers ZR and ZL, Start and
+Back + and −, drawn in each picture's own stroke and shading. The steps were
+measured on exactly those sheets (CRC); with any other, the port's own
+drawings (`resources/buttons/`) are used. `tools/x360/` reads the 360 disc
+(XDVDFS, the STFS package, XCompress `main.pak`, the `.ptx` textures) for
+comparing the two editions. None of its files are needed to build.
+
+The versus screens show Switch Pro Controllers (`console_controllers`).
+
+- The side picker's `images/gamepad0.png` and `gamepad1.png` are the port's.
+  `tools/make_controller_icons.py` makes them from
+  `resources/controllers/controller.png`, with the game's ink outline and a
+  glow measured on the game's own: player 1 yellow, player 2 cyan, the
+  colours of their cursors and P1/P2 labels in the match.
+- The controllers the sunflower and the zombie hold (`plant_side_selected`,
+  `zombie_side_selected`, `help_menu_image_vs_controllers`) are the game's
+  own pictures, recoloured. Their layout already matches the Pro
+  Controller's, so they only take its colours: the plastic its dark grey (by
+  a tone curve) and the buttons black. The zombie's drool keeps its pale
+  blue, its tint strengthened so it shows over the dark plastic. The
+  Xbox guide button and its glow are painted over as the plastic around them
+  would continue: a quadratic fit of a wide band of that plastic for the
+  shading, blended into the hole's edge (Poisson).
+- Each picture's areas were measured on that picture (CRC). If any of the
+  three differs, every controller stays the 360's.
+
 The layer reads only 147 of the English APK's 2,020 entries.
 `tools/make_english_pack.py` records which ones by running the layer on the
 host (the host zip reader logs what it extracts, `MINIZ_TRACE`), writes them

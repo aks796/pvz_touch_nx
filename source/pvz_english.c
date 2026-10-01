@@ -41,6 +41,11 @@
  *             engine's compiled fonts (<app data>/cached/data/<font>.cfu2) are
  *             deleted, or it would keep drawing the old ones.
  *
+ *   console   the help bar's button sheets, the Xbox 360 edition's that
+ *             game.apk carries, with the Switch's names (x360_buttons); the
+ *             versus screens' controllers, Switch Pro Controllers
+ *             (console_controllers). With or without english.apk.
+ *
  * Without english.apk only the text is made (the mod's English table and
  * this port's lines), in the Chinese fonts, which have Latin letters.
  *
@@ -68,7 +73,7 @@
  * key matches, and the fix to it never reaches a card that has one (hardware
  * run 16: the UTF-8 font fix, made with the version unchanged, never ran --
  * and the engine kept loading its compiled copy of the broken font). */
-#define LAYER_VERSION 11
+#define LAYER_VERSION 17
 #define FILES "assets/files/"
 
 /* Files the newest mod changed from the Chinese original that still take the
@@ -133,6 +138,8 @@ typedef struct {
   int zb_tried, zb_ok; /* the Zombatar back slab (make_zombatar_back) */
   uint8_t *icons;      /* the buttons' row, RGBA (font_buttons); NULL: not decoded */
   int icons_w, icons_h, icons_tried;
+  int ic_x[16], ic_w[16];          /* each button in that row: where, how wide */
+  uint8_t *x360_big, *x360_small;  /* the game's own button sheets, relabelled (x360_buttons) */
   int n_icon_fonts, n_icon_fail; /* fonts given the buttons' layer; not */
   char kept[512];
 } Ctx;
@@ -1038,6 +1045,33 @@ static float bilinear(const float *m, int w, int h, float x, float y) {
          (m[y1 * w + x0] * (1 - fx) + m[y1 * w + x1] * fx) * fy;
 }
 
+/* the normal equations of a quadratic fit (1 x y xx yy xy | sum), solved in
+ * place: 0 if singular */
+static int solve6(double ata[6][7], double coef[6]) {
+  for (int i = 0; i < 6; i++) { /* Gauss-Jordan with partial pivoting */
+    int piv = i;
+    for (int r = i + 1; r < 6; r++)
+      if (fabs(ata[r][i]) > fabs(ata[piv][i]))
+        piv = r;
+    for (int k = 0; k < 7; k++) {
+      double tmp = ata[i][k];
+      ata[i][k] = ata[piv][k];
+      ata[piv][k] = tmp;
+    }
+    if (fabs(ata[i][i]) < 1e-12)
+      return 0;
+    for (int r = 0; r < 6; r++)
+      if (r != i) {
+        double f = ata[r][i] / ata[i][i];
+        for (int k = i; k < 7; k++)
+          ata[r][k] -= f * ata[i][k];
+      }
+  }
+  for (int i = 0; i < 6; i++)
+    coef[i] = ata[i][6] / ata[i][i];
+  return 1;
+}
+
 /* hole's pixels (in a w-wide RGBA picture, area box) given a quadratic fit
  * of the grey stone around them, with its grain */
 static void zb_refill(uint8_t *px, int w, int h, const uint8_t *hole, const int box[4], uint32_t seed) {
@@ -1060,30 +1094,9 @@ static void zb_refill(uint8_t *px, int w, int h, const uint8_t *hole, const int 
         }
         n++;
       }
-    if (n < 12)
-      return;
-    for (int i = 0; i < 6; i++) { /* Gauss-Jordan with partial pivoting */
-      int piv = i;
-      for (int r = i + 1; r < 6; r++)
-        if (fabs(ata[r][i]) > fabs(ata[piv][i]))
-          piv = r;
-      for (int k = 0; k < 7; k++) {
-        double tmp = ata[i][k];
-        ata[i][k] = ata[piv][k];
-        ata[piv][k] = tmp;
-      }
-      if (fabs(ata[i][i]) < 1e-12)
-        return;
-      for (int r = 0; r < 6; r++)
-        if (r != i) {
-          double f = ata[r][i] / ata[i][i];
-          for (int k = i; k < 7; k++)
-            ata[r][k] -= f * ata[i][k];
-        }
-    }
     double coef[6];
-    for (int i = 0; i < 6; i++)
-      coef[i] = ata[i][6] / ata[i][i];
+    if (n < 12 || !solve6(ata, coef))
+      return;
     for (int y = box[1]; y < box[3]; y++) /* the grain: the fit's residual */
       for (int x0 = box[0]; x0 < box[2]; x0++) {
         const uint8_t *p = px + ((size_t)y * w + x0) * 4;
@@ -1161,6 +1174,263 @@ static void icon_scale(const uint8_t *src, int sw_total, int sx, int sw, int sh,
   }
 }
 
+/* ------------------------------------------------- the console's buttons */
+/* The game APK carries the Xbox 360 edition's own button pictures: the help
+ * bar's sheets, images/help_buttons.png (13 cels of 42 pixels: A B X Y Start
+ * RB LB D-pad RT LT Back RS LS) and help_buttons_small.png (21 pixels). They
+ * are what the port shows -- in the help bar, and in the text as the fonts'
+ * button layer -- with the Switch's names on the six the Switch calls
+ * otherwise: the bumpers say R and L (their own R and L, the B wiped), the
+ * triggers ZR and ZL (their own R and L moved over, beside a Z in the same
+ * one-pixel stroke), Start and Back a + and a - in the arrows' own shading.
+ * The steps below were measured on exactly these pictures (CRC): any other
+ * sheet, and the port's own drawings are used (resources/buttons/). The small
+ * sheet's changed cels are the big ones halved, as the game's own are. */
+#define X360_W 546
+#define X360_CEL 42
+#define X360_BIG_CRC 0xc85bb103u
+#define X360_SMALL_CRC 0xb3d002f0u
+#define X360_NOISE 14 /* a moved letter's difference from its face below this is the face's */
+
+static uint8_t *x360_px(uint8_t *a, int x, int y) { return a + ((size_t)y * X360_W + (size_t)x) * 4; }
+
+static uint8_t clamp8(long v) { return (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v); }
+
+/* The box x0..x1-1, y0..y1-1 of cel b in a, as its face would be without the
+ * letters: each edge (the pixels just outside the box) blended in, the corners
+ * out (a Coons patch). Into bg (RGB, the box's size). */
+static void x360_face(uint8_t *a, int b, int x0, int y0, int x1, int y1, int *bg) {
+  const double w = x1 - x0 + 1, h = y1 - y0 + 1;
+  for (int y = y0; y < y1; y++)
+    for (int x = x0; x < x1; x++) {
+      const double u = (x - x0 + 1) / w, v = (y - y0 + 1) / h;
+      for (int c = 0; c < 3; c++) {
+        const double l = x360_px(a, b + x0 - 1, y)[c], r = x360_px(a, b + x1, y)[c];
+        const double t = x360_px(a, b + x, y0 - 1)[c], d = x360_px(a, b + x, y1)[c];
+        const double c00 = x360_px(a, b + x0 - 1, y0 - 1)[c], c10 = x360_px(a, b + x1, y0 - 1)[c];
+        const double c01 = x360_px(a, b + x0 - 1, y1)[c], c11 = x360_px(a, b + x1, y1)[c];
+        const double p = (1 - u) * l + u * r + (1 - v) * t + v * d -
+                         ((1 - u) * (1 - v) * c00 + u * (1 - v) * c10 + (1 - u) * v * c01 + u * v * c11);
+        bg[((y - y0) * (x1 - x0) + (x - x0)) * 3 + c] = clamp8(lround(p));
+      }
+    }
+}
+
+/* the same box as rows of one colour each: the face at column from_x */
+static void x360_rows(uint8_t *a, int b, int x0, int y0, int x1, int y1, int from_x, int *bg) {
+  for (int y = y0; y < y1; y++)
+    for (int x = x0; x < x1; x++)
+      for (int c = 0; c < 3; c++)
+        bg[((y - y0) * (x1 - x0) + (x - x0)) * 3 + c] = x360_px(a, b + from_x, y)[c];
+}
+
+static void x360_put_box(uint8_t *img, int b, int x0, int y0, int x1, int y1, const int *bg) {
+  for (int y = y0; y < y1; y++)
+    for (int x = x0; x < x1; x++)
+      for (int c = 0; c < 3; c++)
+        x360_px(img, b + x, y)[c] = (uint8_t)bg[((y - y0) * (x1 - x0) + (x - x0)) * 3 + c];
+}
+
+/* The letter in columns l0..l1-1 of the box (its difference from the face,
+ * dark strokes and light bevel alike) added dx to the right, but the pixels
+ * in skip (cel x, y pairs, ending -1). */
+static void x360_move(uint8_t *img, const uint8_t *src, int b, int x0, int y0, int x1, int y1, const int *bg,
+                      int l0, int l1, int dx, const int *skip) {
+  for (int y = y0; y < y1; y++)
+    for (int x = l0; x < l1; x++) {
+      int skipped = 0;
+      for (const int *s = skip; s && s[0] >= 0; s += 2)
+        skipped |= s[0] == x && s[1] == y;
+      int d[3], big = 0;
+      for (int c = 0; c < 3; c++) {
+        d[c] = x360_px((uint8_t *)src, b + x, y)[c] - bg[((y - y0) * (x1 - x0) + (x - x0)) * 3 + c];
+        big |= abs(d[c]) >= X360_NOISE;
+      }
+      if (skipped || !big)
+        continue;
+      uint8_t *p = x360_px(img, b + x + dx, y);
+      for (int c = 0; c < 3; c++)
+        p[c] = clamp8(p[c] + d[c]);
+    }
+}
+
+/* the triggers' Z: 6 x 9, the letters' one-pixel stroke, darkness in quarters */
+static const uint8_t k_x360_z[9][6] = {
+    {4, 4, 4, 4, 4, 4}, {0, 0, 0, 1, 4, 2}, {0, 0, 0, 3, 3, 0}, {0, 0, 1, 4, 1, 0}, {0, 0, 3, 3, 0, 0},
+    {0, 1, 4, 1, 0, 0}, {0, 3, 3, 0, 0, 0}, {2, 4, 1, 0, 0, 0}, {4, 4, 4, 4, 4, 4},
+};
+
+/* + and - in the arrows' shading: their face, rising by row from 130 to 221,
+ * a darker outline (103 to 135), and a softer ring inside it */
+static int x360_fill(int y) { return (int)lround(130 + (y - 10) * (221 - 130) / 16.0); }
+static int x360_edge(int y) { return (int)lround(103 + (y - 10) * (135 - 103) / 17.0); }
+
+static int x360_in(const int (*r)[4], int n, int x, int y) {
+  for (int i = 0; i < n; i++)
+    if (x >= r[i][0] && x < r[i][2] && y >= r[i][1] && y < r[i][3])
+      return 1;
+  return 0;
+}
+
+static void x360_symbol(uint8_t *img, int b, const int (*r)[4], int n) {
+  for (int y = 1; y < X360_CEL - 2; y++)
+    for (int x = 2; x < X360_CEL - 2; x++) {
+      if (!x360_in(r, n, x, y))
+        continue;
+      const int edge = !x360_in(r, n, x + 1, y) || !x360_in(r, n, x - 1, y) || !x360_in(r, n, x, y + 1) ||
+                       !x360_in(r, n, x, y - 1);
+      const int ring = !x360_in(r, n, x + 1, y + 1) || !x360_in(r, n, x - 1, y - 1) ||
+                       !x360_in(r, n, x + 1, y - 1) || !x360_in(r, n, x - 1, y + 1) ||
+                       !x360_in(r, n, x + 2, y) || !x360_in(r, n, x - 2, y) || !x360_in(r, n, x, y + 2) ||
+                       !x360_in(r, n, x, y - 2);
+      const int v = edge ? x360_edge(y) : ring ? (x360_edge(y) + x360_fill(y)) / 2 + 8 : x360_fill(y);
+      uint8_t *p = x360_px(img, b + x, y);
+      p[0] = p[1] = p[2] = clamp8(v);
+    }
+}
+
+static void x360_relabel(uint8_t *img, const uint8_t *src) {
+  int bg[42 * 42 * 3];
+  /* the bumpers: RB -> R (cel 5), LB -> L (cel 6) */
+  static const int k_bump[2][8] = {{5, 10, 12, 29, 27, 10, 19, 5}, {6, 15, 12, 34, 27, 15, 23, 5}};
+  for (int i = 0; i < 2; i++) {
+    const int *k = k_bump[i], b = k[0] * X360_CEL;
+    x360_face((uint8_t *)src, b, k[1], k[2], k[3], k[4], bg);
+    x360_put_box(img, b, k[1], k[2], k[3], k[4], bg);
+    x360_move(img, src, b, k[1], k[2], k[3], k[4], bg, k[5], k[6], k[7], NULL);
+  }
+  /* the triggers: RT -> ZR (cel 8), LT -> ZL (cel 9): the face's left column
+   * across, the R / L six to the right (LT's T touches the L at one corner),
+   * the Z where the R / L was */
+  static const int k_trig[2][9] = {{8, 14, 15, 25, 28, 34, 15, 21, 15}, {9, 15, 16, 24, 29, 33, 16, 22, 16}};
+  static const int k_skip_lt[] = {21, 24, 21, 25, -1};
+  for (int i = 0; i < 2; i++) {
+    const int *k = k_trig[i], b = k[0] * X360_CEL;
+    x360_rows((uint8_t *)src, b, k[2], k[3], k[4], k[5], k[1], bg);
+    x360_put_box(img, b, k[2], k[3], k[4], k[5], bg);
+    x360_move(img, src, b, k[2], k[3], k[4], k[5], bg, k[6], k[7], 6, i ? k_skip_lt : NULL);
+    for (int y = 0; y < 9; y++)
+      for (int x = 0; x < 6; x++) {
+        uint8_t *p = x360_px(img, b + k[8] + x, k[3] + y);
+        for (int c = 0; c < 3; c++)
+          p[c] = clamp8(p[c] - k_x360_z[y][x] * 180 / 4);
+      }
+  }
+  /* Start -> + (cel 4), Back -> - (cel 10): the arrow gone (its face is one
+   * colour a row), the symbol drawn */
+  static const int k_plus[2][4] = {{11, 15, 31, 21}, {18, 8, 24, 28}}, k_minus[1][4] = {{11, 15, 31, 21}};
+  x360_rows(img, 4 * X360_CEL, 12, 7, 36, 30, 10, bg);
+  x360_put_box(img, 4 * X360_CEL, 12, 7, 36, 30, bg);
+  x360_symbol(img, 4 * X360_CEL, k_plus, 2);
+  x360_rows(img, 10 * X360_CEL, 5, 7, 30, 30, 32, bg);
+  x360_put_box(img, 10 * X360_CEL, 5, 7, 30, 30, bg);
+  x360_symbol(img, 10 * X360_CEL, k_minus, 1);
+}
+
+/* the game's sheets, relabelled into x->x360_big / x360_small: 1 when they
+ * are the ones these steps were made for */
+static int x360_buttons(Ctx *x) {
+  const int bi = index_find(&x->gi, "images/help_buttons.png");
+  const int si = index_find(&x->gi, "images/help_buttons_small.png");
+  if (bi < 0 || si < 0 || entry_crc(x->g, bi) != X360_BIG_CRC || entry_crc(x->g, si) != X360_SMALL_CRC)
+    return 0;
+  size_t bl = 0, sl = 0;
+  uint8_t *bp = extract(x->g, bi, &bl), *sp = extract(x->g, si, &sl);
+  int bw = 0, bh = 0, sw = 0, sh = 0;
+  uint8_t *src = bp ? png_rgba(bp, bl, &bw, &bh) : NULL, *small = sp ? png_rgba(sp, sl, &sw, &sh) : NULL;
+  free(bp);
+  free(sp);
+  uint8_t *img = src ? malloc((size_t)bw * bh * 4) : NULL;
+  if (!src || !small || !img || bw != X360_W || bh != X360_CEL || sw != X360_W / 2 || sh != X360_CEL / 2) {
+    free(src);
+    free(small);
+    free(img);
+    return 0;
+  }
+  memcpy(img, src, (size_t)bw * bh * 4);
+  x360_relabel(img, src);
+  free(src);
+  /* the small sheet's changed cels: the big ones halved (premultiplied) */
+  static const int k_changed[] = {4, 5, 6, 8, 9, 10};
+  for (unsigned k = 0; k < sizeof k_changed / sizeof k_changed[0]; k++)
+    for (int y = 0; y < sh; y++)
+      for (int xx = 0; xx < X360_CEL / 2; xx++) {
+        const int bx = k_changed[k] * X360_CEL + xx * 2, sx = k_changed[k] * (X360_CEL / 2) + xx;
+        double r = 0, g = 0, b = 0, a = 0;
+        for (int dy = 0; dy < 2; dy++)
+          for (int dx = 0; dx < 2; dx++) {
+            const uint8_t *q = x360_px(img, bx + dx, y * 2 + dy);
+            const double qa = q[3] / 255.0;
+            r += q[0] * qa, g += q[1] * qa, b += q[2] * qa, a += qa;
+          }
+        uint8_t *d = small + ((size_t)y * sw + (size_t)sx) * 4;
+        d[0] = a > 0 ? clamp8(lround(r / a)) : 0;
+        d[1] = a > 0 ? clamp8(lround(g / a)) : 0;
+        d[2] = a > 0 ? clamp8(lround(b / a)) : 0;
+        d[3] = clamp8(lround(a / 4 * 255));
+      }
+  x->x360_big = img;
+  x->x360_small = small;
+  return 1;
+}
+
+/* The buttons for the fonts, once: the game's own relabelled (x360_buttons),
+ * else the port's drawings. Each in its own box of x->icons (a row of
+ * x->icons_h pixels), in PVZ_ICON_* order. 1 when there are pictures. */
+static int buttons_load(Ctx *x) {
+  if (x->icons_tried)
+    return x->icons != NULL;
+  x->icons_tried = 1;
+  if (x360_buttons(x)) {
+    /* PVZ_ICON_* order: A B X Y + - L R ZL ZR LS RS D-pad, from the cels A B X
+     * Y Start RB LB D-pad RT LT Back RS LS; all one height (the rows any cel
+     * uses), each as wide as it is */
+    static const int k_cel[PVZ_ICON_COUNT] = {0, 1, 2, 3, 4, 10, 6, 5, 9, 8, 12, 11, 7};
+    int top = X360_CEL, bot = -1, x0[PVZ_ICON_COUNT], x1[PVZ_ICON_COUNT], wsum = 0;
+    for (int i = 0; i < PVZ_ICON_COUNT; i++) {
+      x0[i] = X360_CEL, x1[i] = -1;
+      for (int y = 0; y < X360_CEL; y++)
+        for (int xx = 0; xx < X360_CEL; xx++)
+          if (x360_px(x->x360_big, k_cel[i] * X360_CEL + xx, y)[3]) {
+            top = y < top ? y : top, bot = y > bot ? y : bot;
+            x0[i] = xx < x0[i] ? xx : x0[i], x1[i] = xx > x1[i] ? xx : x1[i];
+          }
+      if (x1[i] < x0[i])
+        x0[i] = 0, x1[i] = 0;
+      wsum += x1[i] - x0[i] + 1;
+    }
+    const int h = bot - top + 1;
+    x->icons = calloc((size_t)wsum * h, 4);
+    if (x->icons) {
+      int at = 0;
+      for (int i = 0; i < PVZ_ICON_COUNT; i++) {
+        const int w = x1[i] - x0[i] + 1;
+        for (int y = 0; y < h; y++)
+          memcpy(x->icons + ((size_t)y * wsum + at) * 4, x360_px(x->x360_big, k_cel[i] * X360_CEL + x0[i], top + y),
+                 (size_t)w * 4);
+        x->ic_x[i] = at, x->ic_w[i] = w;
+        at += w;
+      }
+      x->icons_w = wsum, x->icons_h = h;
+      LOG("[english] buttons: the game's own (the Xbox 360 edition's), with the Switch's names\n");
+      return 1;
+    }
+  }
+  const PvzEnglishRes *res = &x->cfg->res;
+  if (res->icons_png && res->icons_len)
+    x->icons = png_rgba(res->icons_png, res->icons_len, &x->icons_w, &x->icons_h);
+  if (!x->icons || x->icons_h != PVZ_ICON_H) {
+    free(x->icons);
+    x->icons = NULL;
+    LOG("[english] the buttons' pictures could not be read: the text names them\n");
+    return 0;
+  }
+  for (int i = 0; i < PVZ_ICON_COUNT; i++)
+    x->ic_x[i] = k_pvz_icons[i].x, x->ic_w[i] = k_pvz_icons[i].w;
+  LOG("[english] buttons: this port's drawings (the game's sheet is not the one they are made from)\n");
+  return 1;
+}
+
 /* the integer after "<cmd> <layer>" on its line (cmd at a line start); the
  * largest if several; -1 if none. layer_out (if given) gets that line's layer. */
 static int desc_value(const char *t, const char *cmd, char *layer_out, size_t cap) {
@@ -1205,16 +1475,7 @@ static void put_utf8_icon(char *out, int i) { /* U+E000 + i */
  * as data/NAME_buttons_en.png, the descriptor *desc (*len bytes, malloc'd)
  * extended. 0 done; -1 not (the font stays as it was). */
 static int font_buttons(Ctx *x, const char *rel, char **desc, size_t *len) {
-  const PvzEnglishRes *res = &x->cfg->res;
-  if (!res->icons_png || !res->icons_len || x->cfg->no_button_pictures)
-    return -1;
-  if (!x->icons_tried) {
-    x->icons_tried = 1;
-    x->icons = png_rgba(res->icons_png, res->icons_len, &x->icons_w, &x->icons_h);
-    if (!x->icons || x->icons_h != PVZ_ICON_H)
-      LOG("[english] the buttons' pictures could not be read: the text names them\n");
-  }
-  if (!x->icons || x->icons_h != PVZ_ICON_H)
+  if (x->cfg->no_button_pictures || !buttons_load(x))
     return -1;
   char *t = malloc(*len + 1);
   if (!t)
@@ -1254,7 +1515,7 @@ static int font_buttons(Ctx *x, const char *rel, char **desc, size_t *len) {
   const int size = (int)lround(ascent * 0.9), top_off = (int)lround(ascent * 0.67 - size / 2.0);
   int wsum = 0, wi[PVZ_ICON_COUNT];
   for (int i = 0; i < PVZ_ICON_COUNT; i++) {
-    wi[i] = (int)lround((double)k_pvz_icons[i].w * size / PVZ_ICON_H);
+    wi[i] = (int)lround((double)x->ic_w[i] * size / x->icons_h);
     if (wi[i] < 1)
       wi[i] = 1;
     wsum += wi[i] + 2;
@@ -1320,7 +1581,7 @@ static int font_buttons(Ctx *x, const char *rel, char **desc, size_t *len) {
   ADD(");%s%sDefine SwitchButtonRects%s (", nlc, nlc, nlc);
   int xs = 0;
   for (int i = 0; i < PVZ_ICON_COUNT; i++) {
-    icon_scale(x->icons, x->icons_w, k_pvz_icons[i].x, k_pvz_icons[i].w, PVZ_ICON_H,
+    icon_scale(x->icons, x->icons_w, x->ic_x[i], x->ic_w[i], x->icons_h,
                strip + (size_t)(xs + 1) * 4, (size_t)wsum * 4, wi[i], size);
     ADD("%s(%d, 0, %d, %d)", i ? ", " : " ", xs + 1, wi[i], size);
     xs += wi[i] + 2;
@@ -1364,13 +1625,345 @@ static int font_buttons(Ctx *x, const char *rel, char **desc, size_t *len) {
 }
 
 /* The help bar's button sheets (images/help_buttons*.png, drawn by
- * HelpBarWidget and Board::DrawShovel): the Switch's, in the game's order. */
-static void help_sheets(Ctx *x) {
+ * HelpBarWidget and Board::DrawShovel): the game's own relabelled for the
+ * Switch (x360_buttons), whatever the text does; else the port's drawings,
+ * when the text has them too (own_too). */
+static void help_sheets(Ctx *x, int own_too) {
+  buttons_load(x);
+  if (x->x360_big && x->x360_small) {
+    zb_put_png(x, "images/help_buttons.png", x->x360_big, X360_W, X360_CEL);
+    zb_put_png(x, "images/help_buttons_small.png", x->x360_small, X360_W / 2, X360_CEL / 2);
+    return;
+  }
   const PvzEnglishRes *res = &x->cfg->res;
+  if (!own_too)
+    return;
   if (res->help_png && res->help_len)
     put_file(x, "images/help_buttons.png", res->help_png, res->help_len);
   if (res->help_small_png && res->help_small_len)
     put_file(x, "images/help_buttons_small.png", res->help_small_png, res->help_small_len);
+}
+
+/* ---------------------------------------------- the console's controllers */
+/* The versus screens show the players' controllers: the side picker's
+ * images/gamepad0.png and gamepad1.png (player 1's and 2's, in a glow of their
+ * colour) and the ones the sunflower and the zombie hold, plant_side_selected,
+ * zombie_side_selected and help_menu_image_vs_controllers -- every one the
+ * Xbox 360 edition's white controller. The port shows Switch Pro Controllers:
+ * the picker's are the port's pictures (resources/controllers/, made by
+ * tools/make_controller_icons.py with the game's own outline, glow and
+ * colours); the held ones are the game's own, recoloured. Their layout is the
+ * Pro Controller's already (a stick, the D-pad below it, the four buttons, the
+ * other stick below them), so they take its colours, as measured on
+ * resources/controllers/controller.png: the white plastic its dark grey (a
+ * tone curve, so the painting's light and shade stay), the coloured buttons
+ * its black ones, the zombie's drool still over it; the Xbox guide button is
+ * painted over with the plastic round it. Each picture's areas were measured
+ * on exactly that picture (CRC); if any of the three is another, every
+ * controller stays the game's, so the screens never show both kinds. */
+typedef struct {
+  short x0, y0, x1, y1;
+} PadRect;
+
+typedef struct {
+  PadRect r;
+  unsigned char sat_max; /* its greys up to this saturation are the plastic */
+  unsigned char cool;    /* only the cool or neutral ones: the warm are teeth, eyes, a hand */
+  unsigned char slime;   /* the zombie's drool: its pale blue kept over the dark plastic */
+} PadArea;
+
+typedef struct {
+  PadRect r;
+  unsigned char sat; /* the buttons: coloured more than this */
+} PadButtons;
+
+typedef struct {
+  float cx, cy, rx, ry; /* the guide button and its rim: an ellipse */
+  PadRect clip;         /* within this (not the thumb pressing on it) */
+} PadFill;
+
+typedef struct {
+  const char *rel;
+  mz_uint32 crc;
+  PadArea area[2];        /* the first that holds a pixel decides for it */
+  PadRect keep[1];        /* never touched (the zombie's teeth, on the controller's edge) */
+  PadRect guide[2];       /* the guide button's glow: plastic, whatever its tint */
+  PadButtons buttons[2];
+  PadFill fill[2];        /* painted over with the plastic round it */
+} HeldPad;
+
+/* unused entries are all zero (an empty rectangle) */
+static const HeldPad k_held_pads[] = {
+    {"images/plant_side_selected.png", 0xf730b895u,
+     {{{0, 0, 291, 304}, 30, 0, 0}}, {{0}}, {{226, 186, 249, 200}},
+     {{{192, 196, 225, 216}, 30}}, {{238.5f, 192.2f, 12.8f, 7.5f, {0, 0, 291, 304}}}},
+    {"images/zombie_side_selected.png", 0x11216defu,
+     {{{0, 0, 304, 313}, 40, 1, 1}}, {{0}}, {{77, 166, 107, 188}, {94, 188, 100, 189}},
+     {{{117, 150, 154, 186}, 40}}, {{90.5f, 178.6f, 11.5f, 10.3f, {0, 0, 304, 189}}}},
+    {"images/help_menu_image_vs_controllers.png", 0x5fd92484u,
+     {{{8, 47, 66, 83}, 30, 0, 0}, {{55, 77, 119, 119}, 40, 1, 1}}, {{80, 78, 100, 87}},
+     {{52, 56, 61, 60}, {82, 88, 93, 98}},
+     {{{36, 58, 50, 67}, 25}, {{98, 79, 115, 97}, 40}},
+     {{56.0f, 57.5f, 4.3f, 2.3f, {0, 0, 119, 119}}, {88.5f, 92.2f, 4.6f, 4.6f, {0, 0, 119, 97}}}},
+};
+#define N_HELD_PADS (int)(sizeof k_held_pads / sizeof k_held_pads[0])
+#define PAD_FILL_PASSES 500
+
+static const char *const k_pad_rel[2] = {"images/gamepad0.png", "images/gamepad1.png"};
+
+/* the Pro Controller's plastic for the 360's, by lightness */
+static const double k_pad_in[] = {0, 40, 70, 100, 140, 190, 230, 255};
+static const double k_pad_out[] = {0, 24, 32, 42, 56, 76, 90, 104};
+static const int k_pad_tint[3] = {-2, 1, 3};
+
+static int pad_in(const PadRect *r, int x, int y) { return x >= r->x0 && x < r->x1 && y >= r->y0 && y < r->y1; }
+
+static int pad_sat(const uint8_t *q) {
+  const int hi = q[0] > q[1] ? (q[0] > q[2] ? q[0] : q[2]) : (q[1] > q[2] ? q[1] : q[2]);
+  const int lo = q[0] < q[1] ? (q[0] < q[2] ? q[0] : q[2]) : (q[1] < q[2] ? q[1] : q[2]);
+  return hi - lo;
+}
+
+static double pad_curve(double l) {
+  for (int i = 1; i < (int)(sizeof k_pad_in / sizeof k_pad_in[0]); i++)
+    if (l <= k_pad_in[i])
+      return k_pad_out[i - 1] + (l - k_pad_in[i - 1]) * (k_pad_out[i] - k_pad_out[i - 1]) / (k_pad_in[i] - k_pad_in[i - 1]);
+  return k_pad_out[sizeof k_pad_out / sizeof k_pad_out[0] - 1];
+}
+
+static int dbl_cmp(const void *a, const void *b) {
+  const double x = *(const double *)a, y = *(const double *)b;
+  return x < y ? -1 : x > y;
+}
+
+/* the median of n values (reordered), 0 for none */
+static double median(double *v, int n) {
+  if (n <= 0)
+    return 0;
+  qsort(v, (size_t)n, sizeof *v, dbl_cmp);
+  return n % 2 ? v[n / 2] : (v[n / 2 - 1] + v[n / 2]) / 2;
+}
+
+/* The guide button painted over, as the plastic round it would go on: the
+ * surface's shading from a quadratic fit of a wide band of that plastic (twice:
+ * the second without what the first found far off it, the outlines and
+ * creases), carried into the hole's edge by the difference there (each hole
+ * pixel's difference the mean of its neighbours', over and over: Poisson) --
+ * only from plastic, never the thumb on it. No grain: the plastic is smooth
+ * paint (with its measured grain added, the patch showed as speckle). The hole
+ * takes in the button's glow round it too. */
+static void pad_fill(const HeldPad *p, const uint8_t *src, uint8_t *dst, const uint8_t *kind, int w, int h) {
+  const size_t n = (size_t)w * h;
+  uint8_t *hole = malloc(n);
+  double *fit = malloc(n * 3 * sizeof *fit), *d = malloc(n * 3 * sizeof *d), *tmp = malloc(n * sizeof *tmp);
+  int *bx = malloc(n * sizeof *bx), *by = malloc(n * sizeof *by);
+  if (!hole || !fit || !d || !tmp || !bx || !by)
+    goto out;
+  static const int k_dx[4] = {1, -1, 0, 0}, k_dy[4] = {0, 0, 1, -1};
+  for (int f = 0; f < 2; f++) {
+    const PadFill *e = &p->fill[f];
+    if (e->rx <= 0)
+      continue;
+    /* the hole: the ellipse, and the glow round it (yellow-green, light) */
+    int nb = 0;
+    for (int y = 0; y < h; y++)
+      for (int x = 0; x < w; x++) {
+        const size_t i = (size_t)y * w + x;
+        const uint8_t *q = src + i * 4;
+        const double qx = (x - e->cx) / e->rx, qy = (y - e->cy) / e->ry, qq = qx * qx + qy * qy;
+        const int in = q[3] && pad_in(&e->clip, x, y);
+        const int glow = in && qq <= 1.4 * 1.4 && q[1] >= q[2] + 10 && (q[0] + q[1] + q[2]) / 3.0 >= 110 &&
+                         kind[i] != 2 && !pad_in(&p->keep[0], x, y);
+        hole[i] = (in && qq <= 1) || glow;
+      }
+    for (int y = 0; y < h; y++)
+      for (int x = 0; x < w; x++) {
+        const size_t i = (size_t)y * w + x;
+        const double qx = (x - e->cx) / e->rx, qy = (y - e->cy) / e->ry;
+        if (kind[i] == 1 && !hole[i] && qx * qx + qy * qy <= 2.4 * 2.4)
+          bx[nb] = x, by[nb] = y, nb++;
+      }
+    if (nb < 12)
+      continue;
+    /* the surface: a quadratic fit, each channel */
+    for (int c = 0; c < 3; c++) {
+      double coef[6] = {0}, sig = 0;
+      for (int pass = 0; pass < 2; pass++) {
+        double ata[6][7];
+        memset(ata, 0, sizeof ata);
+        int used = 0;
+        for (int k = 0; k < nb; k++) {
+          const double x = bx[k], y = by[k], v = dst[((size_t)by[k] * w + bx[k]) * 4 + c];
+          const double t[6] = {1, x, y, x * x, y * y, x * y};
+          if (pass && fabs(v - (coef[0] + coef[1] * x + coef[2] * y + coef[3] * x * x + coef[4] * y * y +
+                                coef[5] * x * y)) > 2.5 * sig)
+            continue;
+          for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < 6; j++)
+              ata[i][j] += t[i] * t[j];
+            ata[i][6] += t[i] * v;
+          }
+          used++;
+        }
+        if (used < 12 || !solve6(ata, coef))
+          goto next;
+        if (!pass) {
+          for (int k = 0; k < nb; k++) {
+            const double x = bx[k], y = by[k], v = dst[((size_t)by[k] * w + bx[k]) * 4 + c];
+            tmp[k] = fabs(v - (coef[0] + coef[1] * x + coef[2] * y + coef[3] * x * x + coef[4] * y * y +
+                               coef[5] * x * y));
+          }
+          sig = 1.4826 * median(tmp, nb) + 1e-6;
+        }
+      }
+      for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+          fit[((size_t)y * w + x) * 3 + c] = coef[0] + coef[1] * x + coef[2] * y + coef[3] * (double)x * x +
+                                             coef[4] * (double)y * y + coef[5] * (double)x * y;
+    }
+    /* the edge's difference from the fit, carried in */
+    for (size_t i = 0; i < n; i++)
+      for (int c = 0; c < 3; c++)
+        d[i * 3 + c] = hole[i] ? 0 : dst[i * 4 + c] - fit[i * 3 + c];
+    for (int pass = 0; pass < PAD_FILL_PASSES; pass++)
+      for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++) {
+          const size_t i = (size_t)y * w + x;
+          if (!hole[i])
+            continue;
+          double acc[3] = {0};
+          int m = 0;
+          for (int k = 0; k < 4; k++) {
+            const int qx = x + k_dx[k], qy = y + k_dy[k];
+            if (qx < 0 || qy < 0 || qx >= w || qy >= h)
+              continue;
+            const size_t j = (size_t)qy * w + qx;
+            if (!hole[j] && kind[j] != 1)
+              continue;
+            for (int c = 0; c < 3; c++)
+              acc[c] += d[j * 3 + c];
+            m++;
+          }
+          if (m)
+            for (int c = 0; c < 3; c++)
+              d[i * 3 + c] = acc[c] / m;
+        }
+    for (size_t i = 0; i < n; i++)
+      if (hole[i])
+        for (int c = 0; c < 3; c++)
+          dst[i * 4 + c] = clamp8(lround(fit[i * 3 + c] + d[i * 3 + c]));
+  next:;
+  }
+out:
+  free(hole);
+  free(fit);
+  free(d);
+  free(tmp);
+  free(bx);
+  free(by);
+}
+
+/* src (w x h RGBA) recoloured into dst, as p says */
+static void pad_recolour(const HeldPad *p, const uint8_t *src, uint8_t *dst, int w, int h) {
+  const size_t n = (size_t)w * h;
+  uint8_t *core = calloc(n, 1), *kind = calloc(n, 1); /* kind: 1 plastic, 2 a button */
+  if (!core || !kind) {
+    free(core);
+    free(kind);
+    return;
+  }
+  memcpy(dst, src, n * 4);
+  /* the buttons: their colour, then the rims next to it */
+  for (int y = 0; y < h; y++)
+    for (int x = 0; x < w; x++) {
+      const uint8_t *q = src + ((size_t)y * w + x) * 4;
+      const int sat = pad_sat(q);
+      for (int k = 0; k < 2; k++)
+        if (q[3] && pad_in(&p->buttons[k].r, x, y) && sat > p->buttons[k].sat)
+          core[(size_t)y * w + x] = 1;
+    }
+  for (int y = 0; y < h; y++)
+    for (int x = 0; x < w; x++) {
+      const uint8_t *q = src + ((size_t)y * w + x) * 4;
+      uint8_t *d = dst + ((size_t)y * w + x) * 4;
+      if (!q[3] || pad_in(&p->keep[0], x, y))
+        continue;
+      const int r = q[0], g = q[1], b = q[2];
+      const int sat = pad_sat(q);
+      const double l = (r + g + b) / 3.0;
+      const size_t i = (size_t)y * w + x;
+      const int in_buttons = pad_in(&p->buttons[0].r, x, y) || pad_in(&p->buttons[1].r, x, y);
+      const int near = (x > 0 && core[i - 1]) || (x + 1 < w && core[i + 1]) || (y > 0 && core[i - w]) ||
+                       (y + 1 < h && core[i + w]);
+      if (core[i] || (near && in_buttons && sat > 18 && l >= 40)) {
+        for (int c = 0; c < 3; c++)
+          d[c] = clamp8(lround(22 + 0.3 * l + k_pad_tint[c]));
+        kind[i] = 2;
+        continue;
+      }
+      const PadArea *a = NULL;
+      for (int k = 0; k < 2 && !a; k++)
+        if (pad_in(&p->area[k].r, x, y))
+          a = &p->area[k];
+      if (!a || l < 40)
+        continue;
+      const int guide = pad_in(&p->guide[0], x, y) || pad_in(&p->guide[1], x, y);
+      /* (b - g: not the backdrop's blue, which is never light) */
+      const int grey = sat <= a->sat_max && (b - g <= 12 || l >= 150) &&
+                       (!a->cool || b >= (r > g ? r : g) - 6 || (sat <= 10 && l >= 100));
+      if (!grey && !guide)
+        continue;
+      /* the drool: its own pale blue (its colour away from grey, 1.8 times,
+       * so it keeps its tint over the dark plastic), three quarters over it */
+      const double m = pad_curve(l), s = a->slime ? fmin(1, fmax(0, (b - r - 6) / 12.0)) * 0.75 : 0;
+      for (int c = 0; c < 3; c++) {
+        const double v = fmin(255, fmax(0, m + k_pad_tint[c]));
+        const double drool = fmin(255, fmax(0, l + 1.8 * (q[c] - l)));
+        d[c] = clamp8(lround(v + (drool - v) * s));
+      }
+      kind[i] = 1;
+    }
+  free(core);
+  pad_fill(p, src, dst, kind, w, h);
+  free(kind);
+}
+
+/* the held controllers recoloured, into the layer; the side picker's the
+ * port's. All or none. */
+static void console_controllers(Ctx *x) {
+  const PvzEnglishRes *res = &x->cfg->res;
+  uint8_t *img[N_HELD_PADS] = {0};
+  int w[N_HELD_PADS] = {0}, h[N_HELD_PADS] = {0}, ok = 1;
+  for (int i = 0; i < 2; i++)
+    ok &= res->pad_png[i] && res->pad_len[i] && index_find(&x->gi, k_pad_rel[i]) >= 0;
+  for (int i = 0; i < N_HELD_PADS && ok; i++) {
+    const int idx = index_find(&x->gi, k_held_pads[i].rel);
+    if (idx < 0 || entry_crc(x->g, idx) != k_held_pads[i].crc) {
+      LOG("[english] controllers: game.apk's %s is not the one known here: every controller stays "
+          "the game's\n", k_held_pads[i].rel);
+      ok = 0;
+      break;
+    }
+    size_t len = 0;
+    uint8_t *png = extract(x->g, idx, &len);
+    uint8_t *src = png ? png_rgba(png, len, &w[i], &h[i]) : NULL;
+    free(png);
+    img[i] = src ? malloc((size_t)w[i] * h[i] * 4) : NULL;
+    if (img[i])
+      pad_recolour(&k_held_pads[i], src, img[i], w[i], h[i]);
+    free(src);
+    ok = img[i] != NULL;
+  }
+  if (ok) {
+    for (int i = 0; i < 2; i++)
+      put_file(x, k_pad_rel[i], res->pad_png[i], res->pad_len[i]);
+    for (int i = 0; i < N_HELD_PADS; i++)
+      zb_put_png(x, k_held_pads[i].rel, img[i], w[i], h[i]);
+    LOG("[english] controllers: the Switch Pro Controller's (the side picker's, and the game's own "
+        "held ones recoloured)\n");
+  }
+  for (int i = 0; i < N_HELD_PADS; i++)
+    free(img[i]);
 }
 
 /* The help screen's Controls page (menu/HelpMenu.menu.txt, page 2): the
@@ -1740,6 +2333,8 @@ static void close_all(Ctx *x) {
     free(x->made[i]);
   free(x->made);
   free(x->icons);
+  free(x->x360_big);
+  free(x->x360_small);
 }
 
 int pvz_english_apply(mz_zip_archive *game, const PvzEnglishCfg *cfg) {
@@ -1764,6 +2359,9 @@ int pvz_english_apply(mz_zip_archive *game, const PvzEnglishCfg *cfg) {
     h = fnv(h, cfg->res.icons_png, cfg->res.icons_len);
   if (cfg->res.help_png)
     h = fnv(h, cfg->res.help_png, cfg->res.help_len);
+  for (int i = 0; i < 2; i++)
+    if (cfg->res.pad_png[i])
+      h = fnv(h, cfg->res.pad_png[i], cfg->res.pad_len[i]);
   if (x->have_e)
     he = hash_zip(0xcbf29ce484222325ull, &x->e);
   char key[80], have[80], game_part[24];
@@ -1813,8 +2411,7 @@ int pvz_english_apply(mz_zip_archive *game, const PvzEnglishCfg *cfg) {
         "README)...\n", cfg->english_apk ? cfg->english_apk : "the English APK");
   if (x->have_c && !x->fail) {
     make_assets(x); /* first: the text's buttons are pictures only if every font has them */
-    if (x->n_icon_fonts > 0 && x->n_icon_fail == 0)
-      help_sheets(x);
+    help_sheets(x, x->n_icon_fonts > 0 && x->n_icon_fail == 0);
     if (x->cfg->no_button_pictures)
       LOG("[english] buttons: named in the text (button_pictures = false)\n");
     else
@@ -1828,6 +2425,9 @@ int pvz_english_apply(mz_zip_archive *game, const PvzEnglishCfg *cfg) {
     LOG("[english] fonts: %d English fonts, %d pictures\n", x->n_font, x->n_fontimg);
   }
   PROGRESS(950, "English text");
+  if (!x->have_c || x->fail)
+    help_sheets(x, 0); /* the game's own sheets, relabelled, with the text alone too */
+  console_controllers(x);
   make_strings(x);
   help_menu(x);
   PROGRESS(1000, "English text");
