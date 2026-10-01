@@ -4,10 +4,10 @@
 
 # pvz_touch_nx
 
-**Plants vs. Zombies Touch on Nintendo Switch**
+**The Xbox 360 edition of Plants vs. Zombies, on Nintendo Switch**
 
-An unofficial Nintendo Switch wrapper for the Android version of
-**Plants vs. Zombies TV Touch**.
+An unofficial Nintendo Switch wrapper for **Plants vs. Zombies TV Touch**, the
+Android TV port of the console version.
 
 [![Switch](https://img.shields.io/badge/Nintendo_Switch-Homebrew-E60012?style=for-the-badge&logo=nintendoswitch&logoColor=white)](#)
 [![Version](https://img.shields.io/badge/Version-1.0.0-4C8BF5?style=for-the-badge)](#)
@@ -19,17 +19,32 @@ An unofficial Nintendo Switch wrapper for the Android version of
 
 ## About
 
+This is the console edition of Plants vs. Zombies, the one PopCap made for
+Xbox 360 and PlayStation 3, with its two-player modes, its controller layout
+and its pause menu. It comes by way of Transmension's Android TV edition, which
+is that console version on Android with a harder Adventure mode, and the
+**Touch** mod by ZombieYetis.
+
+On the Switch that means:
+
+* **Two players on one console.** The Xbox 360 version's Co-op and Versus
+  modes. The TV edition dropped both in an update; the Touch mod brings them
+  back, and Versus also works online against Android players.
+* **The Xbox 360 controls**: a cursor, seed packets on L and R, hold B to dig,
+  and every sun and coin flying to the cursor with ZL or ZR.
+* **The Xbox 360 pause menu**, and the Xbox version's music as an option
+  (`xbox_music` in `config.ini`).
+* The mod's additions on top: fast forward, a mod menu with cheats, and the
+  Zombatar editor.
+
 `pvz_touch_nx` is a native wrapper that runs the 32-bit ARM (armeabi-v7a)
 Android build of **Plants vs. Zombies TV Touch** on Nintendo Switch. It loads
 the game's own engine libraries and recreates the Android, JNI, audio, input,
 networking and graphics services they expect under Horizon OS. The process
 runs in AArch32 mode, built with devkitARM and libnx32.
 
-The game is Transmension's Android TV edition of Plants vs. Zombies with the
-**Touch** mod by ZombieYetis. The wrapper runs its own build of the mod from
-the mod's GPL source, with controller support for the whole game: the Xbox 360
-edition's controls, the sun vacuum, fast forward, a mod menu, and online and
-local VS.
+The wrapper runs its own build of the Touch mod, from the mod's GPL source,
+with controller support added to every screen.
 
 This release targets **PvZ TV Touch 1.1.5** (`com.trans.pvztv`, build 260925
 or 260924, armeabi-v7a). That version exists only in Chinese. The NRO
