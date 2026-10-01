@@ -346,6 +346,26 @@ class. The port resamples it to 48 kHz for audout (`pvz_audio.c`). Writes
 block while three buffers are queued, which paces the mixer as
 `AudioTrack.write` does on Android.
 
+**The intro video** (`pvz_video.c`, FFmpeg). `movies/intro.mp4` stores each
+half second of sound after the half second of pictures it goes with, and the
+decoder runs only four pictures ahead of the screen. Decoded in file order,
+the sound for 0 s arrived with the pictures for 0.47 s, so it started about
+0.4 s behind them and stayed behind (a host check of the file with FFmpeg
+showed this). Now:
+
+- All of the sound (14 s of AAC, a fraction of a second's work) is decoded
+  before the first picture. The demuxer then seeks back to the start for the
+  pictures only (`decode_sound`).
+- Each 1024-frame buffer is mixed from the sound due when it will be heard:
+  the picture clock, plus the 2.5 queued buffers ahead of it, minus a frame
+  and a half for the picture to reach the screen. After the first buffer the
+  sound follows on by itself, and is only set back in step if it drifts by
+  more than 60 ms (logged). Sound not yet decoded plays as silence instead of
+  holding the timeline back.
+- The track (libfaac, muxed by GPAC with no edit list) keeps the encoder's
+  1024 frames of priming on its timeline, so the sound is placed 1024 frames
+  earlier.
+
 **Input.**
 
 - Controllers appear as Android gamepad devices 1 and 2, and the touchscreen
@@ -356,6 +376,14 @@ block while three buffers are queued, which paces the mixer as
 - The port always lists two controllers. Game code that needs to know whether
   a second controller is really held checks `Gamepad` status +0x19c: 1 means
   present but never used, 3 means active, 2 means idle for 20 s.
+- Adventure's "Player 2, press + to join!" (the Xbox 360 edition's drop-in):
+  the game shows it at a level's start when one player plays, for two levels
+  after the main menu (`LawnApp`+2744, set to 2 by `MainMenu::GotFocus`), with
+  no check for a second controller. The port tells the mod whenever player 2's
+  controller comes or goes (`nativeSetSecondController`, from
+  `log_controller`): with none the mod clears it after `Board::InitLevel`, and
+  one connected during an Adventure level brings it up then
+  (`OfferSecondPlayer`).
 - Text entry (`pvz_text.c`). The new player's name and the cheat code are
   `EditWidget`s on the soft-keyboard path: `showIme`, then
   `onTextChangedNative` with the text. On Android the keyboard's Done then
@@ -383,6 +411,81 @@ r27d (`mod/build_mod.sh`).
   seed state without a valid selected packet, the dig hold included: with an
   empty seed bank (the shovel tutorial) holding B was undone at once. The
   guard now covers only the planting states.
+- Digging with B (`GamepadControls_UpdateOriginal`): the game's own rule is
+  "press and hold B" (the Xbox 360 edition's tutorial words). B over a plant
+  enters the dig state, a meter fills over 1.3 s, and leaving the state digs
+  if it is full (`BaseGamepadControls::ExitState`). The game left it only when
+  B was let go, so a press let go early never dug, and a long one dug only at
+  the release. The plant now comes up as soon as the meter is full; letting
+  go before that still cancels.
+- The dig meter (`GamepadControls::DrawDigIndicator`) is the shovel's button
+  picture with a blue ring filling round it, clockwise from 3 o'clock (a fan
+  of `DrawTrianglesTex` wedges, the same call the yellow cursor frame uses).
+  On hardware (2026-10-01) it showed as a dark see-through circle. The cause
+  was the game's `DrawPreview`: with a seed chosen (a touch drop leaves the
+  plant chosen), it turns image colouring on in a dark, half-clear grey for a
+  recharging packet. Its `PushState`/`PopState` covers only the preview
+  picture, so the grey stays on. `GamepadControls::Draw` draws over it in
+  white, except in the dig state, where the meter comes next. The mod's
+  `DrawPreview` now puts the colouring back as it was on the way out
+  (`KeepImageColouring`), through the game's `SetColor`: the mod's own
+  `Graphics::SetColor` only writes `mColor` and skips `CalcFinalColor`.
+- Buttons held. The engine keeps each controller button's held state in its
+  `Gamepad` (`IsButtonDown`: the byte at +72 + the button), set from the key
+  events by `GamepadApp::ProcessMessage`, and the port's events never reach a
+  gamepad there: every button read as let go. B's dig ended on its first
+  frame (a debug build logged "B held false" while B was down), and X's butter
+  and the ZL/ZR sun vacuum had the same trouble. The mod's `Board::KeyDown` /
+  `KeyUp` now set and clear that byte for every button they map
+  (`NoteButtonHeld`).
+- The planting preview at the cursor is a picture (`mPreviewImage`) that the
+  game's `DrawPreview` draws whenever a seed is chosen. The mod's dynamic
+  preview draws into it only while a plant is held, which with the
+  controller only a touch drag does, so the plant dragged in last stayed on
+  the controller's cursor whatever seed was chosen after. It is now emptied
+  whenever nothing is held (`EmptyPreview`).
+- The seed banks sit 16 px higher than the game has them (`SeedBank::Move`,
+  `kSwitchBankLift`), clear of the lawn's top row, and the shovel, butter and
+  hammer buttons with them (`GetShovelButtonRect`, `GetButterButtonRect`).
+- The mod's "keyboard mode" (`gKeyboardMode`) is its controller mode, against
+  the touchscreen's: it draws the B / X / hammer button pictures by the shovel,
+  the butter and the hammer, and picks up seed packets under the cursor. Only
+  the arrow keys started it, so played with the stick and the buttons the
+  shovel never showed its B. Now any controller button starts it (a touch
+  still ends it).
+- A plant dragged out of the seed bank by touch is planted, when the finger
+  lifts, by the TV remote's OK key (`KEYCODE_RETURN`, as the mod sends it).
+  On hardware (2026-10-01) that left the plant held until A was pressed.
+  `TouchDrop` now presses A itself when the OK key planted nothing, and logs
+  which of the two planted (`[touch] drop`). The touch thresholds below the
+  shovel and the butter moved up with the bank. The Zen Garden's tools have
+  their own threshold, because they stay where the game puts them.
+- The ZL/ZR sun vacuum used to move suns and coins itself, fast from afar,
+  until they came within 200 px of the cursor. There the game's own pull
+  took them from rest, so they jumped close and then crept in. Now the
+  vacuum hands each one straight to the game's pull
+  (`COIN_MOTION_FROM_NEAR_CURSOR`), which speeds up smoothly the whole way in.
+  While the vacuum runs, that pull gains 20 px/s a frame up to 1200, against
+  6.4 up to 600 otherwise, and it eases back down when the vacuum stops. Like
+  the cursor, it leaves co-op's double sun alone, and waits for a sun still
+  growing out of its sunflower.
+- The VS mode list shows the selected map's lawn behind it
+  (`VSPreviewBackground`), from the level background groups
+  (`DelayLoad_Background1`-`5`). The game counts each group's holders:
+  `TodLoadResources` adds one and loads on the first; `TodDeleteResources`
+  takes one away and deletes on the last. A level lets its background go when
+  it ends, which leaves the picture's pointer (`IMAGE_BACKGROUND1`...) as it
+  was. The list loaded a group only while that pointer was empty, so opened
+  after a level it drew a freed picture and crashed (2026-10-01). It now holds
+  the group it shows, swaps the hold when the selection moves, and lets it go
+  when the screen closes (`ChallengeScreen::_destructor`).
+- The online VS lobby (`NetplayLobbyWidget`, made for touch) has controller
+  navigation in the port. The highlight moves to the nearest spot in the
+  direction pressed, with spots off to the side counting extra. Moving
+  sideways from a button now takes a button on the same row first. Before,
+  Create Room went right to Local VS below it (its middle only 35 px further
+  right), Join Room went left to a room card, and the two never reached each
+  other (2026-10-01).
 
 **English.** 1.1.5 exists only in Chinese. The English builds of the older mod
 carry `assets/paks/2.ChangeGameChina.zip`, the Chinese original of every file

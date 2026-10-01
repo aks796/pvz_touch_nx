@@ -387,9 +387,14 @@ void Coin::UpdateFallForAward() {
             float v43 = v41 * 400.0f;
             float v44 = v42 * 400.0f;
             float v45 = sqrtf(v43 * v43 + v44 * v44);
-            float v46 = unk2 + ((6.4f / (v45 / 100.0f)) * (v45 / 100.0f));
-            if (v46 > 600.0f)
-                v46 = 600.0f;
+            // the speed toward the cursor (unk2, pixels a second) grows by 6.4 a frame up to
+            // 600; Switch port: by 20 up to 1200 while the sun vacuum pulls (SwitchHud.h), and
+            // back down to 600 gently, not at once, when it stops
+            const bool aVacuum = switchhud::VacuumPulling(mPlayerIndex);
+            const float aMaxSpeed = aVacuum ? 1200.0f : 600.0f;
+            float v46 = unk2 + (aVacuum ? 20.0f : 6.4f);
+            if (v46 > aMaxSpeed)
+                v46 = std::max(aMaxSpeed, unk2 - 20.0f);
             unk2 = v46;
             if (v45 != 0.0f) {
                 v43 = v43 / v45;

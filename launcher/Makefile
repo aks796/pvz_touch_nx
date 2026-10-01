@@ -3,7 +3,7 @@
 # for a sphaira forwarder's icon. The shared launcher (runtime/launcher/);
 # this file only names it.
 #---------------------------------------------------------------------------------
-APP_TITLE    := Plants vs. Zombies Touch
+APP_TITLE    := Plants vs. Zombies: Touch
 APP_AUTHOR   := aks796, ZombieYetis
 APP_VERSION  := 1.0.0
 TARGET       := pvz_touch_nx

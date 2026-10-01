@@ -184,34 +184,40 @@ void VacuumUpdate(GamepadControls *theControls) {
         left = 0;
         return;
     }
-    // every sun and coin on the lawn drawn to the cursor, faster from afar,
-    // and in once it gets there; in VS a side's own: the plants' sun, the
-    // zombies' brains (as the engine's cursor picks them up)
+    // every sun and coin on the lawn drawn to the cursor; in VS a side's own: the plants'
+    // sun, the zombies' brains (as the engine's cursor picks them up). Each goes the way a
+    // sun near the cursor goes anyway -- the game's own pull (COIN_MOTION_FROM_NEAR_CURSOR,
+    // Coin::UpdateFallForAward), from rest, faster and faster, collected at the cursor --
+    // only harder while the vacuum runs (VacuumPulling). One motion all the way in: it used to
+    // be flung most of the way, then handed to that pull from rest near the cursor, which
+    // showed as a jump and a slow crawl (hardware, 2026-10-01).
     const bool vs = app->IsVSMode();
-    const float cx = theControls->mCursorPositionX, cy = theControls->mCursorPositionY;
+    const int player = theControls->mPlayerIndex;
     Coin *coin = nullptr;
     while (board->IterateCoins(coin)) {
-        if (coin->mDead || coin->mIsBeingCollected || coin->IsLevelAward() || coin->mCoinMotion == CoinMotion::COIN_MOTION_FROM_NEAR_CURSOR) {
+        if (coin->mDead || coin->mIsBeingCollected || coin->IsLevelAward()) {
             continue;
         }
         const bool pulled = vs ? (theControls->mIsZombie ? coin->IsDeath() : coin->IsSun()) : (coin->IsSun() || coin->IsMoney());
-        if (!pulled) {
+        if (!pulled || (coin->mCoinMotion == CoinMotion::COIN_MOTION_FROM_NEAR_CURSOR && coin->mPlayerIndex == player)) {
             continue;
         }
-        const float dx = cx - (coin->mPosX + float(coin->mWidth) / 2.0f);
-        const float dy = cy - (coin->mPosY + float(coin->mHeight) / 2.0f);
-        const float dist = std::sqrt(dx * dx + dy * dy);
-        if (dist < 36.0f) {
-            coin->Collect(theControls->mPlayerIndex);
+        // as Coin::GamepadCursorOver takes one: not co-op's double sun, nor a sun still growing
+        // out of its sunflower (it comes once grown)
+        if (coin->mType == CoinType::COIN_COOP_DOUBLE_SUN || (coin->IsSun() && coin->mScale < coin->GetSunScale())) {
             continue;
         }
-        const float step = std::min(dist, 10.0f + dist * 0.09f);
-        coin->mPosX += dx / dist * step;
-        coin->mPosY += dy / dist * step;
-        coin->mGroundY = int(coin->mPosY); // a falling sun stops falling where it has been pulled to
-        coin->mVelX = 0.0f;
-        coin->mVelY = 0.0f;
+        coin->mCoinMotion = CoinMotion::COIN_MOTION_FROM_NEAR_CURSOR;
+        coin->mPlayerIndex = player;
+        coin->unk2 = 0.0f; // its speed toward the cursor
+        if (coin->IsSun()) {
+            coin->mScale = coin->GetSunScale();
+        }
     }
+}
+
+bool VacuumPulling(int thePlayerIndex) {
+    return gVacuum[thePlayerIndex & 1] > 0;
 }
 
 void PlaceMenuButton(Board *theBoard) {

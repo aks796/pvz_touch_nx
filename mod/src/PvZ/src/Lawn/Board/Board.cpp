@@ -559,8 +559,29 @@ void Board::ProcessDeleteQueue() {
     }
 }
 
+// Switch port: the held buttons NoteButtonHeld keeps, all let go: one let go while
+// something else had the keys (a dialog, the level's end) is never seen let go
+static void LetGoOfButtons(LawnApp *theApp) {
+    for (Sexy::Gamepad *aGamepad : theApp->mGamepads) {
+        if (aGamepad != nullptr) {
+            for (int aButton = Sexy::GamepadButton::GAMEPAD_BUTTON_UP; aButton <= Sexy::GamepadButton::GAMEPAD_BUTTON_DPAD_RIGHT; aButton++) {
+                reinterpret_cast<uint8_t *>(aGamepad)[72 + aButton] = 0;
+            }
+        }
+    }
+}
+
 void Board::InitLevel() {
     old_Board_InitLevel(this);
+    LetGoOfButtons(mApp);
+    // Switch port: the game's "Player 2, press + to join!" (5 blinks: the count at
+    // mUnkIntSecondPlayer1, shown while mUnkBoolSecondPlayer) only with a second controller
+    // to join with. The game shows it whenever one player plays, for two levels after the
+    // main menu; the port lists two controllers to it, connected or not.
+    if (mUnkIntSecondPlayer1 == 5 && gSecondController == 0) {
+        mUnkIntSecondPlayer1 = 0;
+        mUnkBoolSecondPlayer = false;
+    }
     mNewWallNutAndSunFlowerAndChomperOnly = !(mApp->IsScaryPotterLevel() || mApp->IsIZombieLevel() || mApp->IsWhackAZombieLevel() || HasConveyorBeltSeedBank(0) || mApp->IsChallengeWithoutSeedBank());
     mNewPeaShooterCount = 0;
 }
@@ -1102,6 +1123,21 @@ void Board::DrawGameObjects(Graphics *g) {
     }
 }
 
+// Switch port: a controller button held or let go, in the engine's own record of it
+// (Gamepad::IsButtonDown: the byte at +72 + the button), which the port's button events
+// never reach -- GamepadApp::ProcessMessage passes them to no gamepad -- so every button
+// read as let go: B's dig ended on its first frame (hardware, 2026-10-01: "B held false"),
+// X's butter and the ZL/ZR sun vacuum the same
+static void NoteButtonHeld(LawnApp *theApp, int thePad, int theButton, bool theHeld) {
+    if (thePad < 0 || thePad >= 4 || theButton < Sexy::GamepadButton::GAMEPAD_BUTTON_UP || theButton > Sexy::GamepadButton::GAMEPAD_BUTTON_DPAD_RIGHT) {
+        return;
+    }
+    Sexy::Gamepad *aGamepad = theApp->mGamepads[thePad];
+    if (aGamepad != nullptr) {
+        reinterpret_cast<uint8_t *>(aGamepad)[72 + theButton] = theHeld;
+    }
+}
+
 bool Board::KeyUp(Sexy::KeyCode theKey) {
     // 联机对战屏蔽按键，仅允许返回键
     bool isOnlineMode = (IsRemoteClient() || IsRemoteServer());
@@ -1120,6 +1156,7 @@ bool Board::KeyUp(Sexy::KeyCode theKey) {
             int aPlayerIndex;
             unsigned int aButtonFlags;
             if (mApp->MapToButtonEvent(mEvent, aButtonCode, aPlayerIndex, aButtonFlags)) {
+                NoteButtonHeld(mApp, aPlayerIndex, aButtonCode, false);
                 GameButtonUp(aButtonCode, aPlayerIndex, aButtonFlags);
                 return true;
             }
@@ -1150,19 +1187,27 @@ bool Board::KeyUp(Sexy::KeyCode theKey) {
     return true;
 }
 
+// 用于切换键盘模式，自动开关砸罐子老虎机种子雨关卡内的"自动拾取植物卡片"功能
+// Switch port: the controller's mode (the button pictures by the shovel, the butter and
+// the hammer...), as against the touchscreen's, which a touch starts again. Any controller
+// button starts it, not only the arrow keys: played with the stick and the buttons, the
+// shovel never showed its B (tester, 2026-10-01).
+static void EnterKeyboardMode() {
+    if (!gKeyboardMode) {
+        patchlist::autoPickupSeedPacketDisable.Restore();
+    }
+    gKeyboardMode = true;
+    requestDrawShovelInCursor = false;
+}
+
 bool Board::KeyDown(KeyCode theKey) {
     // 联机对战屏蔽按键，仅允许返回键
     bool isOnlineMode = (IsRemoteClient() || IsRemoteServer());
     if (isOnlineMode) {
         return theKey == KEYCODE_BACK;
     }
-    // 用于切换键盘模式，自动开关砸罐子老虎机种子雨关卡内的"自动拾取植物卡片"功能
     if (theKey >= 37 && theKey <= 40) {
-        if (!gKeyboardMode) {
-            patchlist::autoPickupSeedPacketDisable.Restore();
-        }
-        gKeyboardMode = true;
-        requestDrawShovelInCursor = false;
+        EnterKeyboardMode();
     }
 
     // 原版函数开始
@@ -1185,6 +1230,8 @@ bool Board::KeyDown(KeyCode theKey) {
             int aPlayerIndex;
             unsigned int aButtonFlags;
             if (mApp->MapToButtonEvent(mEvent, aButtonCode, aPlayerIndex, aButtonFlags)) {
+                EnterKeyboardMode();
+                NoteButtonHeld(mApp, aPlayerIndex, aButtonCode, true);
                 GameButtonDown(aButtonCode, aPlayerIndex, aButtonFlags);
                 return true;
             }
@@ -3643,7 +3690,26 @@ static void CheatSetZombieSpawn(Board *theBoard, const bool (&theZombiesToSpawn)
 }
 
 
+// Switch port: a second controller connected during an Adventure level that player 2 is not
+// in: the game's own join prompt, as InitLevel sets it (5 blinks, the string, the timer)
+static void OfferSecondPlayer(Board *board) {
+    if (!gSecondControllerArrived) {
+        return;
+    }
+    gSecondControllerArrived = false;
+    LawnApp *app = board->mApp;
+    GamepadControls *p2 = board->mGamepadControls[1];
+    if (!app->IsAdventureMode() || app->mGameScene != SCENE_PLAYING || p2 == nullptr || p2->mGamepadIndex != -1 || board->mUnkIntSecondPlayer1 != 0) {
+        return;
+    }
+    *board->mStringSecondPlayer = "[P2_JOIN]";
+    board->mUnkIntSecondPlayer2 = 0;
+    board->mUnkBoolSecondPlayer = false;
+    board->mUnkIntSecondPlayer1 = 5;
+}
+
 void Board::Update() {
+    OfferSecondPlayer(this);
     isMainMenu = false;
 
     if (requestDrawButterInCursor) {
@@ -4981,8 +5047,11 @@ bool Board::MouseHitTest(int x, int y, HitResult *theHitResult, bool thePlayerIn
 
 
 namespace {
-constexpr int gTouchShovelRectWidth = 72;
-constexpr int gTouchButterRectWidth = 72;
+// (the bottom edges of the shovel's and the butter's buttons, lifted with the seed
+// bank: kSwitchBankLift; the Zen Garden's tools stay where the game has them)
+constexpr int gTouchShovelRectWidth = 72 - kSwitchBankLift;
+constexpr int gTouchButterRectWidth = 72 - kSwitchBankLift;
+constexpr int gTouchZenToolsRectHeight = 72;
 constexpr int gTouchTrigger = 40;
 
 int gTouchLastX;
@@ -5574,7 +5643,7 @@ void Board::__MouseDrag(int x, int y) {
         }
     }
 
-    if (gTouchState == TouchState::TOUCHSTATE_ZEN_GARDEN_TOOLS && gTouchLastY < gTouchButterRectWidth && y >= gTouchButterRectWidth) {
+    if (gTouchState == TouchState::TOUCHSTATE_ZEN_GARDEN_TOOLS && gTouchLastY < gTouchZenToolsRectHeight && y >= gTouchZenToolsRectHeight) {
         gTouchState = TouchState::TOUCHSTATE_BOARD_MOVED_FROM_ZEN_GARDEN_TOOLS;
         gSendKeyWhenTouchUp = true;
     }
@@ -5685,6 +5754,22 @@ void Board::MouseUp(int x, int y, int theClickCount) {
         netplay::PutEvent(event);
     }
 }
+// Switch port: a plant dragged from the seed bank by touch and dropped: the game's OK key
+// (the TV remote's) plants it. On hardware (2026-10-01) the OK key left it held -- the plant
+// waited for A -- so when it planted nothing, A plants it, as the controller's A does.
+static void TouchDrop(Board *theBoard, GamepadControls *theControls, CursorObject *theCursor) {
+    const int aPlantsBefore = theBoard->mPlants.mSize;
+    theControls->OnKeyDown(KeyCode::KEYCODE_RETURN, 1096);
+    const bool aByOk = theBoard->mPlants.mSize != aPlantsBefore;
+    bool aByA = false;
+    if (!aByOk && theControls->mGamepadState == BaseGamepadControls::MOVEMENT_STATE_PLANT_CURSOR && theCursor->mCursorType == CursorType::CURSOR_TYPE_PLANT_FROM_BANK
+        && !theBoard->mApp->IsIZombieLevel()) {
+        theControls->OnButtonDown(Sexy::GamepadButton::GAMEPAD_BUTTON_A, theControls->mPlayerIndex, 0);
+        aByA = theBoard->mPlants.mSize != aPlantsBefore;
+    }
+    LOG_INFO("[touch] drop: planted by the OK key {}, by A {}", aByOk, aByA);
+}
+
 void Board::__MouseUp(int x, int y, int theClickCount) {
     old_Board_MouseUp(this, x, y, theClickCount);
     if (gTouchState != TouchState::TOUCHSTATE_NONE && gSendKeyWhenTouchUp) {
@@ -5720,7 +5805,7 @@ void Board::__MouseUp(int x, int y, int theClickCount) {
                     if (aGameMode == GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON) { // 重型武器关卡需要设置为状态6才能种植猫尾草
                         mGamepadControls[0]->mGamepadState = BaseGamepadControls::MOVEMENT_STATE_SELECT_SEED;
                     }
-                    mGamepadControls[0]->OnKeyDown(KeyCode::KEYCODE_RETURN, 1096);
+                    TouchDrop(this, mGamepadControls[0], mCursorObject[0]);
                 }
                 BaseGamepadControls::MovementState mGameStateNew = mGamepadControls[0]->mGamepadState;
                 int seedPacketIndexNew = mGamepadControls[0]->mSelectedSeedIndex;
@@ -5756,7 +5841,7 @@ void Board::__MouseUp(int x, int y, int theClickCount) {
                            || aGameMode == GameMode::GAMEMODE_MP_VS) {
                     mGamepadControls[1]->OnButtonDown(Sexy::GamepadButton::GAMEPAD_BUTTON_A, mGamepadControls[1]->mPlayerIndex, 0);
                 } else {
-                    mGamepadControls[1]->OnKeyDown(KeyCode::KEYCODE_RETURN, 1096);
+                    TouchDrop(this, mGamepadControls[1], mCursorObject[1]);
                 }
                 BaseGamepadControls::MovementState mGameStateNew_2P = mGamepadControls[1]->mGamepadState;
                 int seedPacketIndexNew_2P = mGamepadControls[1]->mSelectedSeedIndex;
@@ -6378,7 +6463,7 @@ void Board::MouseUpSecond(int x, int y, int theClickCount) {
                     if (aGameMode == GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON) { // 重型武器关卡需要设置为状态6才能种植猫尾草
                         mGamepadControls[0]->mGamepadState = BaseGamepadControls::MOVEMENT_STATE_SELECT_SEED;
                     }
-                    mGamepadControls[0]->OnKeyDown(KeyCode::KEYCODE_RETURN, 1096);
+                    TouchDrop(this, mGamepadControls[0], mCursorObject[0]);
                 }
                 BaseGamepadControls::MovementState mGameStateNew = mGamepadControls[0]->mGamepadState;
                 int numSeedsInBankNew = aSeedBank->GetNumSeedsOnConveyorBelt();
@@ -6403,7 +6488,7 @@ void Board::MouseUpSecond(int x, int y, int theClickCount) {
                            || aGameMode == GameMode::GAMEMODE_MP_VS) {
                     mGamepadControls[1]->OnButtonDown(Sexy::GamepadButton::GAMEPAD_BUTTON_A, mGamepadControls[1]->mPlayerIndex, 0);
                 } else {
-                    mGamepadControls[1]->OnKeyDown(KeyCode::KEYCODE_RETURN, 1096);
+                    TouchDrop(this, mGamepadControls[1], mCursorObject[1]);
                 }
                 BaseGamepadControls::MovementState mGameStateNew_2P = mGamepadControls[1]->mGamepadState;
                 int numSeedsInBankNew_2P = aSeedBank_2P->GetNumSeedsOnConveyorBelt();
@@ -6778,7 +6863,17 @@ Rect Board::GetShovelButtonRect() {
     // }
     // return aRect;
 
-    return old_Board_GetShovelButtonRect(this);
+    Rect aRect = old_Board_GetShovelButtonRect(this);
+    if (!mApp->IsVSMode()) {
+        aRect.mY -= kSwitchBankLift; // Switch port: beside the lifted seed bank
+    }
+    return aRect;
+}
+
+Rect Board::GetButterButtonRect() {
+    Rect aRect = old_Board_GetButterButtonRect(this);
+    aRect.mY -= kSwitchBankLift; // Switch port: beside the lifted seed bank (the hammer's too)
+    return aRect;
 }
 
 void Board::DrawBackdrop(Sexy::Graphics *g) {

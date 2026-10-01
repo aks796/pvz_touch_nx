@@ -546,6 +546,16 @@ extern "C" JNIEXPORT void JNICALL Java_com_transmension_mobile_EnhanceActivity_n
 }
 
 
+// Switch port: the port says whenever player 2's controller connects or goes, so that
+// Adventure's "Player 2, press + to join!" is offered only with one to join with (the port
+// lists two controllers to the game always)
+extern "C" JNIEXPORT void JNICALL Java_com_transmension_mobile_EnhanceActivity_nativeSetSecondController(JNIEnv *env, jclass clazz, jboolean connected) {
+    if (connected && gSecondController == 0) {
+        gSecondControllerArrived = true;
+    }
+    gSecondController = connected ? 1 : 0;
+}
+
 extern "C" JNIEXPORT void JNICALL Java_com_transmension_mobile_EnhanceActivity_nativeSwitchTwoPlayerMode(JNIEnv *env, jclass clazz, jboolean isOn) {
     isKeyboardTwoPlayerMode = doKeyboardTwoPlayerDialog = isOn;
     if (isOn) {

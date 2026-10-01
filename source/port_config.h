@@ -1,4 +1,4 @@
-/* port_config.h -- Plants vs. Zombies Touch's settings for the android32
+/* port_config.h -- Plants vs. Zombies: Touch's settings for the android32
  * runtime.
  *
  * Macros only: the runtime's C files, its assembly and the launcher all read
@@ -9,10 +9,10 @@
 #define PORT_CONFIG_H
 
 /* ------------------------------------------------------------------ the game */
-#define PORT_TITLE   "Plants vs. Zombies Touch"
+#define PORT_TITLE   "Plants vs. Zombies: Touch"
 #define PORT_NAME    "pvz_touch_nx"
 #define PORT_PACKAGE "com.trans.pvztv"
-#define PORT_BANNER  "pvz_nx: Plants vs. Zombies Touch (PvZ TV Touch: Transmension engine + Homura mod, armeabi-v7a)"
+#define PORT_BANNER  "pvz_nx: Plants vs. Zombies: Touch (PvZ TV Touch: Transmension engine + Homura mod, armeabi-v7a)"
 /* releases before 2026-09-30 used /switch/pvztouch (and PvZTouch.nro): its
  * contents move here on the first start; the old NRO stays, and .moved there
  * says it is done */

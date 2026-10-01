@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""make_logo.py -- the Plants vs. Zombies Touch logo in the game's sizes.
+"""make_logo.py -- the Plants vs. Zombies: Touch logo in the game's sizes.
 
 From logo.png (the port's logo, transparent) to resources/logo/, which
 source/pvz_res.S builds in and source/pvz_logo.c writes over the game's own

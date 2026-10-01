@@ -1,4 +1,4 @@
-Plants vs. Zombies Touch for Nintendo Switch (32-bit wrapper)
+Plants vs. Zombies: Touch for Nintendo Switch (32-bit wrapper)
 =============================================================
 by aks796 (the Switch port) and ZombieYetis (the Touch mod)
 
@@ -26,9 +26,9 @@ COMING FROM AN OLDER RELEASE (switch/pvztouch, PvZTouch.nro)
   switch/pvztouch and, if you made a new one, the old forwarder.
 
 SET UP (once)
-  1. In sphaira: Homebrew -> Plants vs. Zombies Touch -> Install Forwarder
+  1. In sphaira: Homebrew -> Plants vs. Zombies: Touch -> Install Forwarder
      (already installed? Install it again for the new name and icon).
-  2. Launch the new "Plants vs. Zombies Touch" icon on the HOME menu. The launcher
+  2. Launch the new "Plants vs. Zombies: Touch" icon on the HOME menu. The launcher
      installs the 32-bit game program for that icon
      (atmosphere/contents/<its title id>/exefs.nsp) and restarts it.
   3. The first start unpacks the game's three libraries from the game APK,

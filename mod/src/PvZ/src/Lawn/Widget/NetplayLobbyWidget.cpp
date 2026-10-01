@@ -489,8 +489,9 @@ void NetplayLobbyWidget::Draw(Graphics *g) {
 // Controller support (the Switch port). The lobby was made for touch: its
 // server list and room cards are hit areas, and nothing handled the keys.
 // The D-pad / stick move a highlight between the server rows, the room cards
-// on show and the buttons, by where they are; in the rooms, up and down go a
-// row at a time and scroll the list. A selects a server, joins the room, or
+// on show and the buttons, by where they are (sideways from a button, a button
+// on its row first); in the rooms, up and down go a row at a time and scroll
+// the list. A selects a server, joins the room, or
 // presses the button; X creates a room and Y joins the selected one from
 // anywhere (their pictures are on those buttons); B leaves, as before (the
 // dialog's own KeyDown). The highlight is the thing chosen, not a place, so
@@ -599,6 +600,28 @@ int StepSpot(const std::vector<LobbySpot> &v, const Rect &from, int dx, int dy) 
     return best;
 }
 
+// Sideways from a button: the nearest button on the same row that way, if there is one.
+// StepSpot alone took Create Room right to Local VS below (its middle only 35 px further
+// right, so 35 + 3 x 90 beat Join Room's 420 beside it), and the two never reached each
+// other (tester, 2026-10-01).
+int SameRowButton(const std::vector<LobbySpot> &v, const Rect &from, int dx) {
+    const int x = from.mX + from.mWidth / 2, y = from.mY + from.mHeight / 2;
+    int best = -1;
+    long bestAhead = 0;
+    for (int i = 0; i < static_cast<int>(v.size()); ++i) {
+        const long oy = SpotY(v[i]) - y;
+        const long ahead = long(SpotX(v[i]) - x) * dx;
+        if (v[i].kind != SPOT_BUTTON || oy < -4 || oy > 4 || ahead <= 8) {
+            continue;
+        }
+        if (best < 0 || ahead < bestAhead) {
+            best = i;
+            bestAhead = ahead;
+        }
+    }
+    return best;
+}
+
 void DrawButtonPicture(Graphics *g, const GameButton *b, int theCel) {
     if (!ButtonUsable(b) || IMAGE_HELP_BUTTONS_SMALL == nullptr) {
         return;
@@ -687,7 +710,10 @@ bool NetplayLobbyWidget::PadKeyDown(Sexy::KeyCode theKey) {
             }
         }
         const Rect from = at >= 0 ? spots[at].rect : RoomCardOnScreen(*this, gLobbyPad.index);
-        const int to = StepSpot(spots, from, dx, dy);
+        int to = at >= 0 && spots[at].kind == SPOT_BUTTON && dx != 0 ? SameRowButton(spots, from, dx) : -1;
+        if (to < 0) {
+            to = StepSpot(spots, from, dx, dy);
+        }
         if (to >= 0) {
             gLobbyPad.kind = spots[to].kind;
             gLobbyPad.index = spots[to].index;

@@ -88,7 +88,7 @@ static struct {
   fn_event key, touch, joystick;
   fn_iii second_touch;
   fn_i p1_button, p2_button;
-  fn_z gaoji_pause;
+  fn_z gaoji_pause, second_pad;
   fn_rz gaoji_paused, in_game;
 } N;
 
@@ -108,6 +108,11 @@ static void log_controller(int p) {
   if (style == seen[p])
     return;
   seen[p] = style;
+  /* The mod offers Adventure's "Player 2, press + to join!" only with a
+   * second controller to join with (the game sees two always: the port lists
+   * both devices) */
+  if (p == 1 && N.second_pad)
+    N.second_pad(g_jni_env, jni_class("com/transmension/mobile/EnhanceActivity")->obj, style != 0);
   if (!style) {
     debugPrintf("[input] player %d: no controller\n", p + 1);
     return;
@@ -146,6 +151,7 @@ void pvz_input_init(void) {
   N.gaoji_pause = (fn_z)pvz_native(EA_ "nativeGaoJiPause");
   N.gaoji_paused = (fn_rz)pvz_native(EA_ "nativeIsGaoJiPaused");
   N.in_game = (fn_rz)pvz_native(EA_ "nativeIsInGame");
+  N.second_pad = (fn_z)pvz_native(EA_ "nativeSetSecondController");
   g_nim_class = jni_class("com/transmension/mobile/NativeInputManager")->obj;
   g_ready = N.key && N.touch && N.joystick;
   debugPrintf("[input] natives: key %p touch %p joystick %p, mod: second touch %p, 1P %p 2P %p\n",

@@ -259,26 +259,28 @@ bool SeedBank::ContainsPoint(int theX, int theY) {
 }
 
 namespace {
-// Switch port: the y each VS bank was last given (lifted), per bank, so a bank
+// Switch port: the y each bank was last given (lifted), per bank, so a bank
 // moved sideways -- the game passes its own y back then (CutScene::
 // AnimateBoard) -- is not lifted twice
 struct {
     const SeedBank *bank;
     int shownY;
-} gVSBankY[2];
+} gBankY[2];
 } // namespace
 
 void SeedBank::Move(int x, int y) {
     // 在对战模式 错开双方的Bank
     mX = x;
-    mY = y;
+    // Switch port: every bank kSwitchBankLift higher than the game has it, clear of
+    // the lawn's top row (in VS since 2026-09-27; everywhere since a tester saw the
+    // bank and the shovel over the lawn, 2026-10-01)
+    auto &lifted = gBankY[mBoard != nullptr && mBoard->mSeedBank[1] == this ? 1 : 0];
+    if (lifted.bank != this || y != lifted.shownY) {
+        lifted.bank = this;
+        lifted.shownY = y - kSwitchBankLift;
+    }
+    mY = lifted.shownY;
     if (mApp->mGameMode == GameMode::GAMEMODE_MP_VS) {
-        auto &lifted = gVSBankY[mBoard != nullptr && mBoard->mSeedBank[1] == this ? 1 : 0];
-        if (lifted.bank != this || y != lifted.shownY) {
-            lifted.bank = this;
-            lifted.shownY = y - kSwitchVSBankLift;
-        }
-        mY = lifted.shownY;
         int theSeedBankExtraWidth = mBoard->GetSeedBankExtraWidth();
         if (mIsZombie) {
             mX += (5 - theSeedBankExtraWidth / 2);

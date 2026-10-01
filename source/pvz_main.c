@@ -1,4 +1,4 @@
-/* pvz_main.c -- Plants vs. Zombies Touch's part of the boot (the runtime's
+/* pvz_main.c -- Plants vs. Zombies: Touch's part of the boot (the runtime's
  * main.c runs the rest: runtime/source/main.c).
  *
  * port_load() goes from the APK to the game's first code: setup (the

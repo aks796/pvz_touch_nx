@@ -177,6 +177,7 @@ void InitHookFunction() {
     homura::HookFunc(Board_PickZombieWavesAddr, &Board::PickZombieWaves, &old_Board_PickZombieWaves);
     homura::HookFunc(Board_DrawUITopAddr, &Board::DrawUITop, &old_Board_DrawUITop);
     homura::HookFunc(Board_GetShovelButtonRectAddr, &Board::GetShovelButtonRect, &old_Board_GetShovelButtonRect);
+    homura::HookFunc(Board_GetButterButtonRectAddr, &Board::GetButterButtonRect, &old_Board_GetButterButtonRect);
     homura::HookFunc(Board_UpdateLevelEndSequenceAddr, &Board::UpdateLevelEndSequence, &old_Board_UpdateLevelEndSequence);
     homura::HookFunc(Board_UpdateGridItemsAddr, &Board::UpdateGridItems, &old_Board_UpdateGridItems);
     homura::HookFunc(Board_ShakeBoardAddr, &Board::ShakeBoard, &old_Board_ShakeBoard);

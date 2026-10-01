@@ -31,6 +31,8 @@
 #include "PvZ/TodLib/Common/TodCommon.h"
 #include "PvZ/TodLib/Common/TodStringFile.h"
 
+#include <cstring>
+
 using namespace Sexy;
 
 namespace {
@@ -45,6 +47,15 @@ int gListLastStep = -1000;            // the update of its last step
 constexpr int kVSListLift = 60;
 constexpr int kVSListTop = 92 - kVSListLift; // the first row's top
 constexpr int kVSListStepTicks = 15; // one step at most every 0.15 s: a short list
+
+const char *gVSPreviewGroup; // the background group the VS list holds, if any
+
+void ReleaseVSPreview() {
+    if (gVSPreviewGroup != nullptr) {
+        TodDeleteResources(gVSPreviewGroup);
+        gVSPreviewGroup = nullptr;
+    }
+}
 
 Sexy::Image *VSPreviewBackground(int theMode) {
     const char *group = "DelayLoad_Background1";
@@ -65,8 +76,19 @@ Sexy::Image *VSPreviewBackground(int theMode) {
         default: // day, and shuffle (played by day)
             break;
     }
-    if (*image == nullptr) {
-        TodLoadResources(group); // a level loads its own the same way (Board::LoadBackgroundImages)
+    // The list holds the group shown, as a level holds its own (Board::LoadBackgroundImages):
+    // the game counts each group's holders (TodLoadResources +1, loading it on the first;
+    // TodDeleteResources -1, deleting it on the last), and a level lets its background go
+    // when it ends, which leaves the picture's pointer as it was. The list used to load the
+    // group only while that pointer was empty, so after a level it drew a freed picture and
+    // crashed (hardware, 2026-10-01).
+    if (gVSPreviewGroup == nullptr || std::strcmp(gVSPreviewGroup, group) != 0) {
+        const bool aLoaded = TodLoadResources(group); // (not counted if it fails)
+        ReleaseVSPreview();
+        if (!aLoaded) {
+            return nullptr; // the plain challenge background then
+        }
+        gVSPreviewGroup = group;
     }
     return *image;
 }
@@ -320,6 +342,7 @@ void ChallengeScreen::_constructor(LawnApp *theApp, ChallengePage thePage) {
 }
 
 void ChallengeScreen::_destructor() {
+    ReleaseVSPreview(); // Switch port: the list's hold on the lawn behind it
     delete mBackButton;
     old_ChallengeScreen__destructor(this);
 }

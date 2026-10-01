@@ -10,7 +10,11 @@
  * the video carries under the logo painted out, and drawn over the game's
  * picture before each present (pvz_video_draw); the sound is mixed into the
  * game's audio output (pvz_video_mix). The pictures follow the clock started
- * at the first one shown. Any button or a touch ends it.
+ * at the first one shown, and so does the sound: all of it is decoded before
+ * the first picture (the file keeps each half second of sound after its half
+ * second of pictures, so a decoder only four pictures ahead handed it over
+ * late, and the sound ran ~0.4 s behind), and each buffer of it is mixed from
+ * where the clock says it will be heard. Any button or a touch ends it.
  *
  * This file is compiled with -fno-short-enums, as FFmpeg is. MIT.
  */
@@ -18,6 +22,7 @@
 #include <GLES/glext.h>
 #include <arm_neon.h>
 #include <malloc.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,6 +62,11 @@ void dcr_window_size(int *w, int *h);
 void dcr_boost_hold(int on); /* dcr_boost.c */
 
 #define NSLOT 4           /* pictures decoded ahead */
+/* the track (libfaac 1.28, muxed by GPAC with no edit list) keeps the
+ * encoder's priming on its timeline: the sound proper starts this many frames
+ * after the pictures' 0, whether FFmpeg drops the priming (it does: the first
+ * frame comes labelled 0.023 s) or not (labelled 0) */
+#define AAC_PRIMING 1024
 #define APK_DIR "assets/files/"
 
 /* the co-production banner under the logo, in the 1280x720 picture: filled
@@ -97,7 +107,11 @@ static struct {
   int16_t *pcm;
   size_t pcm_cap, pcm_frames; /* frames decoded */
   int arate;
+  double atb;         /* the sound stream's time base, in seconds */
+  double apts0;       /* the time of the first sound frame */
   double apos;        /* next frame to play */
+  int amixed;         /* apos was set from the clock */
+  int resyncs;
   volatile int audio_go;
 } V = {.vs = -1, .as = -1, .shown = -1};
 
@@ -272,6 +286,10 @@ static void put_sound(const AVFrame *f) {
     return;
   const int ch = f->ch_layout.nb_channels;
   size_t n = (size_t)f->nb_samples;
+  if (!V.pcm_frames) {
+    const int64_t ts = f->best_effort_timestamp != AV_NOPTS_VALUE ? f->best_effort_timestamp : f->pts;
+    V.apts0 = ts == AV_NOPTS_VALUE ? 0 : (double)ts * V.atb;
+  }
   mutexLock(&V.lock);
   if (V.pcm_frames + n > V.pcm_cap)
     n = V.pcm_cap - V.pcm_frames;
@@ -296,14 +314,37 @@ static void put_sound(const AVFrame *f) {
   mutexUnlock(&V.lock);
 }
 
-/* Into the game's output (48 kHz stereo s16), from pvz_audio.c's writer. */
+static double now_s(void) { return (double)armTicksToNs(armGetSystemTick() - V.t0) / 1e9; }
+
+/* Into the game's output (48 kHz stereo s16), from pvz_audio.c's writer: the
+ * sound due when this buffer is heard. That is after the buffers queued before
+ * it (three, one of them playing: 2.5 on average), and the picture drawn now is
+ * seen a frame or two after its draw; so the buffer starts at the clock plus
+ * the difference. The first buffer starts there, the rest follow on; if they
+ * come apart by more than 60 ms (the game's sound thread held up, or the
+ * sound missing) it starts there again. Sound not decoded is silence, the
+ * timeline going on. */
 void pvz_video_mix(int16_t *out, int frames, int out_rate) {
   if (!V.audio_go || !V.pcm || V.arate <= 0)
     return;
   mutexLock(&V.lock);
+  if (!V.audio_go || !V.pcm) { /* closed meanwhile (close_all frees the sound after this) */
+    mutexUnlock(&V.lock);
+    return;
+  }
   const double step = (double)V.arate / (double)out_rate;
+  const double ahead = 2.5 * frames / out_rate - 1.5 / 60.0;
+  const double want = (now_s() + ahead - V.apts0) * V.arate;
+  if (!V.amixed || fabs(V.apos - want) > 0.06 * V.arate) {
+    if (V.amixed && V.resyncs++ < 8)
+      debugPrintf("[video] sound %.0f ms off the pictures: back in step\n", (V.apos - want) * 1000.0 / V.arate);
+    V.apos = want;
+    V.amixed = 1;
+  }
   const double have = (double)V.pcm_frames;
-  for (int i = 0; i < frames && V.apos + 1 < have; i++) {
+  for (int i = 0; i < frames; i++, V.apos += step) {
+    if (V.apos < 0 || V.apos + 1 >= have)
+      continue;
     const int i0 = (int)V.apos;
     const double t = V.apos - i0;
     for (int c = 0; c < 2; c++) {
@@ -311,40 +352,58 @@ void pvz_video_mix(int16_t *out, int frames, int out_rate) {
       int v = out[i * 2 + c] + (int)s;
       out[i * 2 + c] = (int16_t)(v < -32768 ? -32768 : v > 32767 ? 32767 : v);
     }
-    V.apos += step;
   }
   mutexUnlock(&V.lock);
 }
 
 /* ------------------------------------------------------------ decoding */
+static void only_stream(int keep) {
+  for (unsigned i = 0; i < V.fmt->nb_streams; i++)
+    V.fmt->streams[i]->discard = (int)i == keep ? AVDISCARD_DEFAULT : AVDISCARD_ALL;
+}
+
+/* All of the sound (14 s of AAC: a fraction of a second), then back to the
+ * start for the pictures. 0, or -1: the pictures cannot be read now. */
+static int decode_sound(AVPacket *pkt, AVFrame *fr) {
+  const u64 t = armGetSystemTick();
+  only_stream(V.as);
+  while (!V.stop && av_read_frame(V.fmt, pkt) >= 0) {
+    if (pkt->stream_index == V.as && avcodec_send_packet(V.adec, pkt) >= 0)
+      while (avcodec_receive_frame(V.adec, fr) == 0)
+        put_sound(fr);
+    av_packet_unref(pkt);
+  }
+  avcodec_send_packet(V.adec, NULL);
+  while (avcodec_receive_frame(V.adec, fr) == 0)
+    put_sound(fr);
+  if (V.adec->codec_id == AV_CODEC_ID_AAC)
+    V.apts0 -= (double)AAC_PRIMING / V.arate;
+  only_stream(V.vs);
+  const int r = av_seek_frame(V.fmt, V.vs, 0, AVSEEK_FLAG_BACKWARD);
+  debugPrintf("[video] the sound first: %.2f s in %.0f ms (frame 0 at %.3f s); back to the start: %s\n",
+              (double)V.pcm_frames / V.arate, (double)armTicksToNs(armGetSystemTick() - t) / 1e6, V.apts0,
+              r >= 0 ? "ok" : av_err2str(r));
+  return r >= 0 ? 0 : -1;
+}
+
 static void decode_thread(void *arg) {
   (void)arg;
   AVPacket *pkt = av_packet_alloc();
   AVFrame *fr = av_frame_alloc();
   int got_video = 0;
+  if (pkt && fr && V.adec && decode_sound(pkt, fr) < 0)
+    V.stop = 1;
   while (pkt && fr && !V.stop) {
     const int r = av_read_frame(V.fmt, pkt);
-    AVCodecContext *dec = NULL;
-    if (r >= 0)
-      dec = pkt->stream_index == V.vs ? V.vdec : pkt->stream_index == V.as ? V.adec : NULL;
-    if (r < 0) { /* the end: what the decoders hold */
-      if (V.vdec)
-        avcodec_send_packet(V.vdec, NULL);
-      while (V.vdec && !V.stop && avcodec_receive_frame(V.vdec, fr) == 0)
+    if (r < 0) { /* the end: what the decoder holds */
+      avcodec_send_packet(V.vdec, NULL);
+      while (!V.stop && avcodec_receive_frame(V.vdec, fr) == 0)
         put_picture(fr), got_video++;
-      if (V.adec)
-        avcodec_send_packet(V.adec, NULL);
-      while (V.adec && avcodec_receive_frame(V.adec, fr) == 0)
-        put_sound(fr);
       break;
     }
-    if (dec && avcodec_send_packet(dec, pkt) >= 0)
-      while (!V.stop && avcodec_receive_frame(dec, fr) == 0) {
-        if (dec == V.vdec)
-          put_picture(fr), got_video++;
-        else
-          put_sound(fr);
-      }
+    if (pkt->stream_index == V.vs && avcodec_send_packet(V.vdec, pkt) >= 0)
+      while (!V.stop && avcodec_receive_frame(V.vdec, fr) == 0)
+        put_picture(fr), got_video++;
     av_packet_unref(pkt);
   }
   av_frame_free(&fr);
@@ -405,7 +464,8 @@ int pvz_video_open(const char *path) {
   mutexInit(&V.lock);
   V.stop = V.skip = V.eof = 0;
   V.finished = V.started = 0;
-  V.apos = 0;
+  V.apos = V.apts0 = 0;
+  V.amixed = V.resyncs = 0;
   V.pcm_frames = 0;
   V.file = read_from_apk(path, &V.file_len);
   if (!V.file) {
@@ -448,6 +508,7 @@ int pvz_video_open(const char *path) {
     }
   if (V.adec) {
     V.arate = V.adec->sample_rate;
+    V.atb = av_q2d(V.fmt->streams[V.as]->time_base);
     const double secs = V.fmt->duration > 0 ? (double)V.fmt->duration / AV_TIME_BASE : 30.0;
     V.pcm_cap = (size_t)((secs + 2.0) * V.arate);
     V.pcm = malloc(V.pcm_cap * 4);
@@ -551,8 +612,6 @@ static void finish(const char *why) {
     done(g_jni_env, jni_class("com/transmension/mobile/EnhanceActivity")->obj);
 }
 
-static double now_s(void) { return (double)armTicksToNs(armGetSystemTick() - V.t0) / 1e9; }
-
 /* Once per way of drawing: the first picture with some light in the middle,
  * read back at five points from the screen just drawn. */
 static void check_on_screen(int vw, int vh, GLenum err) {
@@ -633,6 +692,7 @@ void pvz_video_draw(void) {
       if (V.ready[i] && V.pts[i] <= t && (due < 0 || V.pts[i] > V.pts[due]))
         due = i;
   }
+  const int nothing = !V.started && due < 0 && V.eof;
   int any_left = 0;
   if (due >= 0) {
     for (int i = 0; i < NSLOT; i++) /* the ones it passed are done with */
@@ -644,6 +704,10 @@ void pvz_video_draw(void) {
   for (int i = 0; i < NSLOT; i++)
     any_left |= V.ready[i] && i != due && i != V.shown;
   mutexUnlock(&V.lock);
+  if (nothing) {
+    finish("no pictures");
+    return;
+  }
 
   if (due >= 0 && due != V.shown) { /* into the texture */
     GLint bound = 0, align = 4, active = GL_TEXTURE0;

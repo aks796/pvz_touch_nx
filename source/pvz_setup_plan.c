@@ -1,4 +1,4 @@
-/* pvz_setup_plan.c -- Plants vs. Zombies Touch's part of the first launch:
+/* pvz_setup_plan.c -- Plants vs. Zombies: Touch's part of the first launch:
  * its setup plan for the runtime's dcr_setup.c, and its own steps.
  *
  * The game folder (/switch/pvz_touch_nx) needs only the player's own APK,
@@ -195,7 +195,7 @@ static void step_english(RtSetupCtx *ctx) {
 }
 
 /* ------------------------------------------------------------ the logo */
-/* The Plants vs. Zombies Touch logo (logo.png at the port's top, sized by
+/* The Plants vs. Zombies: Touch logo (logo.png at the port's top, sized by
  * tools/make_logo.py, built in: pvz_res.S) over the game's, on the main menu
  * and the title screen: the engine reads the files dir before the APK. What
  * was there (the English layer's picture) is kept as <name>.orig and put
@@ -235,7 +235,7 @@ static void step_logo(RtSetupCtx *ctx) {
   if (a < 0 || b < 0)
     debugPrintf("[setup] logo: could not write it (is the SD card full?)\n");
   else if (a || b)
-    debugPrintf("[setup] logo: %s\n", on ? "Plants vs. Zombies Touch" : "the game's own");
+    debugPrintf("[setup] logo: %s\n", on ? "Plants vs. Zombies: Touch" : "the game's own");
 }
 
 /* An earlier build's picture of the lawn's top-right buttons (they are the

@@ -64,6 +64,8 @@ bool XboxSunCollecting(LawnApp *theApp);
 void SunTrigger(GamepadControls *theControls);
 // each update of a player's controls: the vacuum while its trigger is held
 void VacuumUpdate(GamepadControls *theControls);
+// the vacuum is pulling for this player (Coin::UpdateFallForAward pulls harder then)
+bool VacuumPulling(int thePlayerIndex);
 
 // The level's Menu button (Board::mBoardMenuButton) goes to the corner.
 // Board::UpdateButtons.

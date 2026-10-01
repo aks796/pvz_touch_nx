@@ -33,7 +33,7 @@ pvz_res_homura_end:
 pvz_res_homura_size:
 	.word pvz_res_homura_end - pvz_res_homura
 
-/* The Plants vs. Zombies Touch logo (logo.png, sized by tools/make_logo.py):
+/* The Plants vs. Zombies: Touch logo (logo.png, sized by tools/make_logo.py):
  * the main menu's and the title screen's (dcr_setup.c ensure_logo). */
 	.balign 4
 	.global pvz_res_logo_menu

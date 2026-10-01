@@ -123,7 +123,7 @@ static const CfgOpt k_opts[] = {
      "# adds to each English font). False: the text names them (A, +, ZL...).",
      CFG_BOOL, NULL, N},
     {"game", "touch_logo", "true",
-     "The Plants vs. Zombies Touch logo on the title screen and main menu.\n"
+     "The Plants vs. Zombies: Touch logo on the title screen and main menu.\n"
      "# False: the game's own.",
      CFG_BOOL, NULL, N},
     {"game", "intro_video", "true",

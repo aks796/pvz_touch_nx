@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="icon.jpg" alt="Plants vs. Zombies Touch" width="160">
+<img src="icon.jpg" alt="Plants vs. Zombies: Touch" width="160">
 
-# pvz_touch_nx
+# Plants vs. Zombies: Touch
 
-**The Xbox 360 edition of Plants vs. Zombies, on Nintendo Switch**
+**The Xbox 360 edition of Plants vs. Zombies, on Nintendo Switch** (`pvz_touch_nx`)
 
 An unofficial Nintendo Switch wrapper for **Plants vs. Zombies TV Touch**, the
 Android TV port of the console version.
@@ -146,7 +146,7 @@ sd:/switch/pvz_touch_nx/
 
 The file name does not matter as long as it ends in `.apk`.
 
-1. In sphaira, open **Homebrew > Plants vs. Zombies Touch** and choose
+1. In sphaira, open **Homebrew > Plants vs. Zombies: Touch** and choose
    **Install Forwarder**.
 2. Launch the new icon on the HOME menu. The launcher installs the 32-bit game
    program for that icon and restarts it.
@@ -205,7 +205,7 @@ lacks some 32-bit instructions.
 
 ## Credits
 
-**Plants vs. Zombies Touch Nintendo Switch port**: aks796
+**Plants vs. Zombies: Touch Nintendo Switch port**: aks796
 
 **Plants vs. Zombies**: PopCap Games. Android TV edition: Transmension.
 

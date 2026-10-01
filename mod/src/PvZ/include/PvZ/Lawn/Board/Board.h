@@ -522,9 +522,7 @@ public:
     void SetTutorialState(TutorialState theTutorialState) {
         reinterpret_cast<void (*)(Board *, TutorialState)>(Board_SetTutorialStateAddr)(this, theTutorialState);
     }
-    Sexy::Rect GetButterButtonRect() {
-        return reinterpret_cast<Sexy::Rect (*)(Board *)>(Board_GetButterButtonRectAddr)(this);
-    }
+    Sexy::Rect GetButterButtonRect();
     Zombie *ZombieTryToGet(ZombieID theZombieID) {
         return reinterpret_cast<Zombie *(*)(Board *, ZombieID)>(Board_ZombieTryToGetAddr)(this, theZombieID);
     }
@@ -867,10 +865,12 @@ inline int choiceSeedPacketIndex;
 inline SeedType choiceSeedType = SeedType::SEED_NONE;
 inline bool isImitaterSeed;
 inline bool setSeedPacket;
-// Switch port: in VS both seed banks sit this much higher than the game has
-// them (SeedBank::Move), clear of the lawn's top row, and the shovel beside them
-constexpr int kSwitchVSBankLift = 16;
-inline Sexy::Rect gTouchVSShovelRect = {-120, 10 - kSwitchVSBankLift, 70, 72};
+// Switch port: every seed bank sits this much higher than the game has it
+// (SeedBank::Move), clear of the lawn's top row, and the shovel, butter and
+// hammer buttons beside it (GetShovelButtonRect, GetButterButtonRect; in VS the
+// shovel's own rect)
+constexpr int kSwitchBankLift = 16;
+inline Sexy::Rect gTouchVSShovelRect = {-120, 10 - kSwitchBankLift, 70, 72};
 
 inline bool hideCoverLayer;
 inline bool infiniteSun; // 无限阳光
@@ -985,6 +985,7 @@ inline void (*old_Board_ShakeBoard)(Board *board, int theShakeAmountX, int theSh
 inline void (*old_Board_UpdateFog)(Board *board);
 
 inline Sexy::Rect (*old_Board_GetShovelButtonRect)(Board *board);
+inline Sexy::Rect (*old_Board_GetButterButtonRect)(Board *board);
 
 inline void (*old_Board_DrawZenButtons)(Board *board, Sexy::Graphics *a2);
 

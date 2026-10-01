@@ -94,6 +94,15 @@ void GamepadControls_UpdateOriginal(GamepadControls *gamepadControls, float dt) 
             gamepadControls->GotoState(BaseGamepadControls::MOVEMENT_STATE_NORMAL);
             gamepadControls->mIsShowingDigIndicator = false;
         }
+        // Switch port: "press and hold B to dig" (the Xbox 360 edition's own words): the plant
+        // comes up as soon as the dig meter is full, B still held. The game dug only once B
+        // was let go after that, so a press let go early never dug and a long one dug only at
+        // the release (tester, 2026-10-01). Leaving the state digs: ExitState, when the time
+        // in it (mDigIndicatorPercentage, which UpdateStates adds each frame's time to) is over
+        // 1.3 s, the meter's full. Letting go before that still cancels.
+        if (gamepadControls->mGamepadState == BaseGamepadControls::MOVEMENT_STATE_DIG_HOLD && gamepadControls->mDigIndicatorPercentage > 1.3f) {
+            gamepadControls->GotoState(BaseGamepadControls::MOVEMENT_STATE_NORMAL);
+        }
         if (!GamepadButtonDown(app, gamepadControls->mGamepadIndex, Sexy::GamepadButton::GAMEPAD_BUTTON_B) && gamepadControls->mGamepadState == BaseGamepadControls::MOVEMENT_STATE_DIG_HOLD) {
             gamepadControls->GotoState(BaseGamepadControls::MOVEMENT_STATE_NORMAL);
         }
@@ -665,6 +674,25 @@ FilterEffect GetFilterEffectTypeBySeedType(SeedType mSeedType) {
     return FilterEffect::FILTEREFFECT_WASHED_OUT;
 }
 
+// Switch port: the picture at the cursor (mPreviewImage, which the game's DrawPreview draws
+// whenever a seed is chosen, whatever the cursor does) emptied when nothing is held, once.
+// The dynamic preview draws into it only while a plant is held, which with the controller
+// only a touch drag does: the plant dragged in last stayed on the controller's cursor for
+// good, whichever seed was chosen after (hardware, 2026-10-01).
+static bool gPreviewEmpty[2];
+
+static void EmptyPreview(GamepadControls *theControls) {
+    bool &empty = gPreviewEmpty[theControls->mPlayerIndex == 1 ? 1 : 0];
+    if (empty || theControls->mPreviewImage == nullptr) {
+        return;
+    }
+    empty = true;
+    theControls->InvalidatePreviewReanim();
+    theControls->mPreviewingSeedType = SeedType::SEED_NONE;
+    Graphics g(theControls->mPreviewImage);
+    g.ClearRect(0, 0, theControls->mPreviewImage->mWidth, theControls->mPreviewImage->mHeight);
+}
+
 void GamepadControls::UpdatePreviewReanim() {
     // 动态预览!!
 
@@ -691,8 +719,14 @@ void GamepadControls::UpdatePreviewReanim() {
     int aGridX = mBoard->PixelToGridXKeepOnBoard(mCursorPositionX, mCursorPositionY);
     int aGridY = mBoard->PixelToGridYKeepOnBoard(mCursorPositionX, mCursorPositionY);
     if (aSeedBank == nullptr || mSelectedSeedIndex < 0 || mSelectedSeedIndex >= 10) {
+        EmptyPreview(this);
         return;
     }
+    if (aCursorObject->mCursorType != CursorType::CURSOR_TYPE_PLANT_FROM_USABLE_COIN && mGamepadState != MOVEMENT_STATE_PLANT_CURSOR) {
+        EmptyPreview(this);
+        return;
+    }
+    gPreviewEmpty[mPlayerIndex == 1 ? 1 : 0] = false;
 
     bool isImitater = aSeedBank->mSeedPackets[mSelectedSeedIndex].mPacketType == SeedType::SEED_IMITATER;
 
@@ -1087,7 +1121,31 @@ void GamepadControls::UpdateStates(float dt) {
     }
 }
 
+// Switch port: the game's DrawPreview, with a seed chosen, turns image colouring on in a dark,
+// half-clear grey (for a recharging packet) and leaves it on (its PushState/PopState only
+// wraps the preview picture). GamepadControls::Draw then draws over it in white, except
+// while B digs: the dig meter came out a dark see-through circle with no ring (hardware,
+// 2026-10-01, after a touch drop had left the plant chosen). The colouring goes back to
+// what it was on the way out.
+namespace {
+struct KeepImageColouring {
+    Sexy::Graphics *mGraphics;
+    bool mColorizeImages;
+    Sexy::Color mColor;
+    explicit KeepImageColouring(Sexy::Graphics *g)
+        : mGraphics(g)
+        , mColorizeImages(g->mColorizeImages)
+        , mColor(g->mColor) {}
+    ~KeepImageColouring() {
+        // the game's SetColor, which also works out the colour images are drawn in
+        reinterpret_cast<void (*)(Sexy::Graphics *, const Sexy::Color &)>(Sexy_Graphics_SetColorAddr)(mGraphics, mColor);
+        mGraphics->SetColorizeImages(mColorizeImages);
+    }
+};
+} // namespace
+
 void GamepadControls::DrawPreview(Sexy::Graphics *g) {
+    const KeepImageColouring aKeep(g); // Switch port
     // 修复排山倒海、砸罐子无尽、锤僵尸、种子雨不显示植物预览的问题。
     LawnApp *anApp = mApp;
     GameMode mGameMode = anApp->mGameMode;

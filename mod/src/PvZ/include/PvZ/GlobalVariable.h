@@ -47,6 +47,10 @@ inline bool projectilePierce;
 inline bool m1PChoosingSeeds = true;
 inline bool normalLevel; // 恢复一二周目正常出怪
 inline bool useNewShovel;
+// Switch port: whether a second controller is connected, as the port says
+// (nativeSetSecondController): 1 yes, 0 no, -1 not told (the game's own rule)
+inline int gSecondController = -1;
+inline bool gSecondControllerArrived; // it has just connected: Board::Update offers the join
 inline bool useNewCobCannon;
 inline bool showHouse;
 inline bool imitater;
