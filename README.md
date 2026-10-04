@@ -33,7 +33,7 @@ or 260924, armeabi-v7a). That version exists only in Chinese. The NRO
 carries the English pictures, fonts and text of **PvZTouch 4.0.5**, the
 English build of the older mod, and lays them over the game.
 
-No game code is included. You need your own copy of the APK.
+No game code is included. You need your own copy of the APK. 
 
 ---
 
